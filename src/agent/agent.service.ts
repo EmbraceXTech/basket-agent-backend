@@ -70,7 +70,6 @@ export class AgentService {
       where: eq(schema.agentsTable.id, +id),
       with: {
         knowledge: true,
-        log: true,
         walletKey: {
           columns: {
             address: true,
