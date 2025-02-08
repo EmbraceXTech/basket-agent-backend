@@ -31,7 +31,7 @@ export const agentsTable = pgTable('agents', {
   endDate: timestamp('end_date').notNull(),
   stopLossUSD: integer().notNull(),
   takeProfitUSD: integer().notNull(),
-  isActive: boolean().notNull().default(true),
+  isRunning: boolean().notNull().default(false),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 

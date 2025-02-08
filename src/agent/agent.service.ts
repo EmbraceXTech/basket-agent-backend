@@ -11,6 +11,7 @@ import { DrizzleAsyncProvider } from 'src/db/drizzle.provider';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from 'src/db/schema';
 import { WithdrawTokenDto } from './dto/withdraw-token.dto';
+import { and, eq } from 'drizzle-orm';
 
 @Injectable()
 export class AgentService {
@@ -19,67 +20,141 @@ export class AgentService {
     private readonly db: NodePgDatabase<typeof schema>,
   ) {}
 
-  findAll() {
-    // TODO: Implement findAll logic
+  private userId = 1;
+
+  async findAll() {
+    const agents = await this.db.query.agentsTable.findMany({
+      where: eq(schema.agentsTable.userId, this.userId),
+    });
+    return agents;
   }
 
-  create(createAgentDto: CreateAgentDto) {
-    // TODO: Implement create logic
+  async create(createAgentDto: CreateAgentDto) {
+    const agent = await this.db.insert(schema.agentsTable).values({
+      ...createAgentDto,
+      userId: this.userId,
+    });
+    return agent;
   }
 
-  findOne(id: string) {
-    // TODO: Implement findOne logic
+  async findOne(id: string) {
+    const agent = await this.db.query.agentsTable.findFirst({
+      where: eq(schema.agentsTable.id, +id),
+    });
+    return agent;
   }
 
-  getLogs(id: string) {
-    // TODO: Implement getLogs logic
+  async getLogs(id: string) {
+    const logs = await this.db.query.logsTable.findMany({
+      where: eq(schema.logsTable.agentId, +id),
+    });
+    return logs;
   }
 
-  updateStrategy(id: string, updateStrategyDto: UpdateStrategyDto) {
-    // TODO: Implement updateStrategy logic
+  async updateStrategy(id: string, updateStrategyDto: UpdateStrategyDto) {
+    const agent = await this.db
+      .update(schema.agentsTable)
+      .set({
+        strategy: updateStrategyDto.strategy,
+      })
+      .where(eq(schema.agentsTable.id, +id));
+    return agent;
   }
 
-  addKnowledge(id: string, addKnowledgeDto: AddKnowledgeDto) {
-    // TODO: Implement addKnowledge logic
+  async addKnowledge(id: string, addKnowledgeDto: AddKnowledgeDto) {
+    const knowledge = await this.db.insert(schema.knowledgesTable).values({
+      ...addKnowledgeDto,
+      agentId: +id,
+    });
+    return knowledge;
   }
 
-  deleteKnowledge(id: string, knowledgeId: string) {
-    // TODO: Implement deleteKnowledge logic
+  async deleteKnowledge(id: string, knowledgeId: string) {
+    const knowledge = await this.db
+      .delete(schema.knowledgesTable)
+      .where(
+        and(
+          eq(schema.knowledgesTable.id, +knowledgeId),
+          eq(schema.knowledgesTable.agentId, +id),
+        ),
+      );
+    return knowledge;
   }
 
-  updateInterval(id: string, updateIntervalDto: UpdateIntervalDto) {
-    // TODO: Implement updateInterval logic
+  async updateInterval(id: string, updateIntervalDto: UpdateIntervalDto) {
+    const agent = await this.db
+      .update(schema.agentsTable)
+      .set({
+        ...updateIntervalDto,
+      })
+      .where(eq(schema.agentsTable.id, +id));
+    return agent;
   }
 
-  updateEndDate(id: string, updateEndDateDto: UpdateEndDateDto) {
-    // TODO: Implement updateEndDate logic
+  async updateEndDate(id: string, updateEndDateDto: UpdateEndDateDto) {
+    const agent = await this.db
+      .update(schema.agentsTable)
+      .set({
+        ...updateEndDateDto,
+      })
+      .where(eq(schema.agentsTable.id, +id));
+    return agent;
   }
 
-  updateStopLoss(id: string, updateStopLossDto: UpdateStopLossDto) {
-    // TODO: Implement updateStopLoss logic
+  async updateStopLoss(id: string, updateStopLossDto: UpdateStopLossDto) {
+    const agent = await this.db
+      .update(schema.agentsTable)
+      .set({
+        ...updateStopLossDto,
+      })
+      .where(eq(schema.agentsTable.id, +id));
+    return agent;
   }
 
-  updateTakeProfit(id: string, updateTakeProfitDto: UpdateTakeProfitDto) {
-    // TODO: Implement updateTakeProfit logic
+  async updateTakeProfit(id: string, updateTakeProfitDto: UpdateTakeProfitDto) {
+    const agent = await this.db
+      .update(schema.agentsTable)
+      .set({
+        ...updateTakeProfitDto,
+      })
+      .where(eq(schema.agentsTable.id, +id));
+    return agent;
   }
 
-  start(id: string) {
+  async start(id: string) {
     // TODO: Implement start logic
+    return {
+      id,
+    };
   }
 
-  pause(id: string) {
+  async pause(id: string) {
     // TODO: Implement pause logic
+    return {
+      id,
+    };
   }
 
-  stop(id: string) {
+  async stop(id: string) {
     // TODO: Implement stop logic
+    return {
+      id,
+    };
   }
 
-  updateTokens(id: string, updateTokensDto: UpdateTokensDto) {
+  async updateTokens(id: string, updateTokensDto: UpdateTokensDto) {
     // TODO: Implement updateTokens logic
+    return {
+      id,
+      updateTokensDto,
+    };
   }
 
-  withdraw(id: string, withdrawTokenDto: WithdrawTokenDto) {
+  async withdraw(id: string, withdrawTokenDto: WithdrawTokenDto) {
     // TODO: Implement withdraw logic
+    return {
+      id,
+      withdrawTokenDto,
+    };
   }
 }

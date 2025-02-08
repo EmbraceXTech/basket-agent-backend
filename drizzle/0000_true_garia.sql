@@ -9,7 +9,7 @@ CREATE TABLE "agents" (
 	"end_date" timestamp NOT NULL,
 	"stopLossUSD" integer NOT NULL,
 	"takeProfitUSD" integer NOT NULL,
-	"isActive" boolean DEFAULT true NOT NULL,
+	"isRunning" boolean DEFAULT false NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
