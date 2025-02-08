@@ -46,23 +46,23 @@ export class WalletController {
     }
   }
 
-  @Post('create-agent-wallet')
-  async createAgentWallet(
-    @Body(ValidationPipe) createAgentWalletDto: CreateAgentWalletDto,
-  ) {
-    // Check agent ownership
-    const userId = '';
-    try {
-      const result = await this.walletService.createAgentWallet(
-        createAgentWalletDto.agentId,
-      );
-      return {
-        address: result.address,
-      };
-    } catch (e) {
-      throw new HttpException(e.message, HttpStatus.INTERNAL_SERVER_ERROR);
-    }
-  }
+  // @Post('create-agent-wallet')
+  // async createAgentWallet(
+  //   @Body(ValidationPipe) createAgentWalletDto: CreateAgentWalletDto,
+  // ) {
+  //   // Check agent ownership
+  //   const userId = '';
+  //   try {
+  //     const result = await this.walletService.createAgentWallet(
+  //       createAgentWalletDto.agentId,
+  //     );
+  //     return {
+  //       address: result.address,
+  //     };
+  //   } catch (e) {
+  //     throw new HttpException(e.message, HttpStatus.INTERNAL_SERVER_ERROR);
+  //   }
+  // }
 
   // TODO: check agent ownership
   @Post('withdraw-agent-funds')
@@ -92,7 +92,9 @@ export class WalletController {
     // TODO: check agent ownership
     const userId = '';
     try {
-      const wallet = await this.walletService.getAgentWallet(testFaucetDto.agentId);
+      const wallet = await this.walletService.getAgentWallet(
+        testFaucetDto.agentId,
+      );
       const faucetTx = await wallet.faucet(testFaucetDto.token);
       await faucetTx.wait();
       return {
@@ -102,5 +104,4 @@ export class WalletController {
       throw new HttpException(e.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
-
 }

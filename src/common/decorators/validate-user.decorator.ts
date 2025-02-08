@@ -1,7 +1,7 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 import { AccessTokenPayload } from 'src/auth/at-payload.model';
 
-export const GetJwtPayload = createParamDecorator(
+export const ValidateUser = createParamDecorator(
   (
     data: keyof AccessTokenPayload | undefined = 'sub',
     context: ExecutionContext,

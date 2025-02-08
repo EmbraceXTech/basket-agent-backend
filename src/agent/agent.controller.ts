@@ -6,6 +6,7 @@ import {
   Delete,
   Param,
   Body,
+  UseGuards,
 } from '@nestjs/common';
 import { AgentService } from './agent.service';
 import { CreateAgentDto } from './dto/create-agent.dto';
@@ -17,115 +18,135 @@ import { UpdateTakeProfitDto } from './dto/update-take-profit.dto';
 import { UpdateTokensDto } from './dto/update-tokens.dto';
 import { AddKnowledgeDto } from './dto/add-knowledge.dto';
 import { WithdrawTokenDto } from './dto/withdraw-token.dto';
+import { AgentGuard } from '../common/guards/agent.guard';
+import { ValidateAgentOwner } from 'src/common/decorators/validate-agent-owner.decorator';
+import { ValidateUser } from 'src/common/decorators/validate-user.decorator';
 
 @Controller('agent')
 export class AgentController {
   constructor(private readonly agentService: AgentService) {}
 
   @Get()
-  findAll() {
-    return this.agentService.findAll();
+  findAll(@ValidateUser() userId: string) {
+    return this.agentService.findAll(userId);
   }
 
   @Post()
-  create(@Body() createAgentDto: CreateAgentDto) {
-    return this.agentService.create(createAgentDto);
+  create(
+    @ValidateUser() userId: string,
+    @Body() createAgentDto: CreateAgentDto,
+  ) {
+    return this.agentService.create(userId, createAgentDto);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.agentService.findOne(id);
+  @UseGuards(AgentGuard)
+  @Get(':agentId')
+  findOne(@ValidateAgentOwner() agentId: string) {
+    return this.agentService.findOne(agentId);
   }
 
+  @UseGuards(AgentGuard)
   @Get(':id/logs')
-  getLogs(@Param('id') id: string) {
-    return this.agentService.getLogs(id);
+  getLogs(@ValidateAgentOwner() agentId: string) {
+    return this.agentService.getLogs(agentId);
   }
 
-  @Patch(':id/strategy')
+  @UseGuards(AgentGuard)
+  @Patch(':agentId/strategy')
   updateStrategy(
-    @Param('id') id: string,
+    @ValidateAgentOwner() agentId: string,
     @Body() updateStrategyDto: UpdateStrategyDto,
   ) {
-    return this.agentService.updateStrategy(id, updateStrategyDto);
+    return this.agentService.updateStrategy(agentId, updateStrategyDto);
   }
 
-  @Post(':id/knowledge')
+  @UseGuards(AgentGuard)
+  @Post(':agentId/knowledge')
   addKnowledge(
-    @Param('id') id: string,
+    @ValidateAgentOwner() agentId: string,
     @Body() addKnowledgeDto: AddKnowledgeDto,
   ) {
-    return this.agentService.addKnowledge(id, addKnowledgeDto);
+    return this.agentService.addKnowledge(agentId, addKnowledgeDto);
   }
 
-  @Delete(':id/knowledge/:knowledgeId')
+  @UseGuards(AgentGuard)
+  @Delete(':agentId/knowledge/:knowledgeId')
   deleteKnowledge(
-    @Param('id') id: string,
+    @ValidateAgentOwner() agentId: string,
     @Param('knowledgeId') knowledgeId: string,
   ) {
-    return this.agentService.deleteKnowledge(id, knowledgeId);
+    return this.agentService.deleteKnowledge(agentId, knowledgeId);
   }
 
-  @Patch(':id/interval')
+  @UseGuards(AgentGuard)
+  @Patch(':agentId/interval')
   updateInterval(
-    @Param('id') id: string,
+    @ValidateAgentOwner() agentId: string,
     @Body() updateIntervalDto: UpdateIntervalDto,
   ) {
-    return this.agentService.updateInterval(id, updateIntervalDto);
+    return this.agentService.updateInterval(agentId, updateIntervalDto);
   }
 
-  @Patch(':id/end-date')
+  @UseGuards(AgentGuard)
+  @Patch(':agentId/end-date')
   updateEndDate(
-    @Param('id') id: string,
+    @ValidateAgentOwner() agentId: string,
     @Body() updateEndDateDto: UpdateEndDateDto,
   ) {
-    return this.agentService.updateEndDate(id, updateEndDateDto);
+    return this.agentService.updateEndDate(agentId, updateEndDateDto);
   }
 
-  @Patch(':id/stop-loss')
+  @UseGuards(AgentGuard)
+  @Patch(':agentId/stop-loss')
   updateStopLoss(
-    @Param('id') id: string,
+    @ValidateAgentOwner() agentId: string,
     @Body() updateStopLossDto: UpdateStopLossDto,
   ) {
-    return this.agentService.updateStopLoss(id, updateStopLossDto);
+    return this.agentService.updateStopLoss(agentId, updateStopLossDto);
   }
 
-  @Patch(':id/take-profit')
+  @UseGuards(AgentGuard)
+  @Patch(':agentId/take-profit')
   updateTakeProfit(
-    @Param('id') id: string,
+    @ValidateAgentOwner() agentId: string,
     @Body() updateTakeProfitDto: UpdateTakeProfitDto,
   ) {
-    return this.agentService.updateTakeProfit(id, updateTakeProfitDto);
+    return this.agentService.updateTakeProfit(agentId, updateTakeProfitDto);
   }
 
-  @Patch(':id/start')
-  start(@Param('id') id: string) {
-    return this.agentService.start(id);
+  @UseGuards(AgentGuard)
+  @Patch(':agentId/start')
+  start(@ValidateAgentOwner() agentId: string) {
+    return this.agentService.start(agentId);
   }
 
-  @Patch(':id/pause')
-  pause(@Param('id') id: string) {
-    return this.agentService.pause(id);
+  @UseGuards(AgentGuard)
+  @Patch(':agentId/pause')
+  pause(@ValidateAgentOwner() agentId: string) {
+    return this.agentService.pause(agentId);
   }
 
-  @Patch(':id/stop')
-  stop(@Param('id') id: string) {
-    return this.agentService.stop(id);
+  @UseGuards(AgentGuard)
+  @Patch(':agentId/stop')
+  stop(@ValidateAgentOwner() agentId: string) {
+    return this.agentService.stop(agentId);
   }
 
-  @Patch(':id/tokens')
+  @UseGuards(AgentGuard)
+  @Patch(':agentId/tokens')
   updateTokens(
-    @Param('id') id: string,
+    @ValidateAgentOwner() agentId: string,
     @Body() updateTokensDto: UpdateTokensDto,
   ) {
-    return this.agentService.updateTokens(id, updateTokensDto);
+    return this.agentService.updateTokens(agentId, updateTokensDto);
   }
 
-  @Post(':id/withdraw')
+  @UseGuards(AgentGuard)
+  @Post(':agentId/withdraw')
   withdraw(
-    @Param('id') id: string,
+    @ValidateAgentOwner() agentId: string,
     @Body() withdrawTokenDto: WithdrawTokenDto,
   ) {
-    return this.agentService.withdraw(id, withdrawTokenDto);
+    return this.agentService.withdraw(agentId, withdrawTokenDto);
   }
 }

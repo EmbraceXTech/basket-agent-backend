@@ -6,5 +6,6 @@ import { privyWalletProvider } from './wallet.provider';
 @Module({
   controllers: [WalletController],
   providers: [WalletService, privyWalletProvider],
+  exports: [WalletService],
 })
 export class WalletModule {}

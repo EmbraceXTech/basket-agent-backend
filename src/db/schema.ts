@@ -11,7 +11,7 @@ import { relations } from 'drizzle-orm';
 export const usersTable = pgTable('users', {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
   telegramId: varchar({ length: 255 }).notNull().unique(),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
+  createdAt: timestamp().notNull().defaultNow(),
 });
 
 export const usersRelations = relations(usersTable, ({ many }) => ({
@@ -24,18 +24,15 @@ export const agentsTable = pgTable('agents', {
   userId: integer()
     .notNull()
     .references(() => usersTable.id),
-  walletKeyId: integer()
-    .notNull()
-    .references(() => walletKeysTable.id),
   chainId: varchar({ length: 255 }).notNull(),
-  selectedTokens: text('selected_tokens').array(),
+  selectedTokens: text().array().notNull(),
   strategy: text().notNull(),
   intervalSeconds: integer().notNull(),
-  endDate: timestamp('end_date').notNull(),
-  stopLossUSD: integer().notNull(),
-  takeProfitUSD: integer().notNull(),
+  stopLossUSD: integer(),
+  takeProfitUSD: integer(),
   isRunning: boolean().notNull().default(false),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
+  endDate: timestamp(),
+  createdAt: timestamp().notNull().defaultNow(),
 });
 
 export const agentsRelations = relations(agentsTable, ({ one, many }) => ({
@@ -43,12 +40,9 @@ export const agentsRelations = relations(agentsTable, ({ one, many }) => ({
     fields: [agentsTable.userId],
     references: [usersTable.id],
   }),
-  walletKey: one(walletKeysTable, {
-    fields: [agentsTable.walletKeyId],
-    references: [walletKeysTable.id],
-  }),
-  logs: many(logsTable),
-  knowledge: one(knowledgesTable),
+  walletKey: one(walletKeysTable),
+  log: many(logsTable),
+  knowledge: many(knowledgesTable),
 }));
 
 export const logsTable = pgTable('logs', {
@@ -60,7 +54,7 @@ export const logsTable = pgTable('logs', {
   action: varchar({ length: 255 }).notNull(),
   amount: integer().notNull(),
   tokenAddr: varchar({ length: 255 }).notNull(),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
+  createdAt: timestamp().notNull().defaultNow(),
 });
 
 export const logsRelations = relations(logsTable, ({ one }) => ({
@@ -77,7 +71,7 @@ export const knowledgesTable = pgTable('knowledges', {
     .references(() => agentsTable.id),
   name: varchar({ length: 255 }).notNull(),
   content: text().notNull(),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
+  createdAt: timestamp().notNull().defaultNow(),
 });
 
 export const knowledgesRelations = relations(knowledgesTable, ({ one }) => ({
@@ -91,12 +85,17 @@ export const walletKeysTable = pgTable('wallet_keys', {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
   agentId: integer()
     .references(() => agentsTable.id)
+    .notNull()
     .unique(),
-  walletAddress: varchar({ length: 255 }).notNull().unique(),
-  walletKey: varchar({ length: 255 }).notNull(),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
+  address: varchar({ length: 255 }).notNull().unique(),
+  ivString: varchar({ length: 255 }).notNull(),
+  encryptedWalletData: text().notNull(),
+  createdAt: timestamp().notNull().defaultNow(),
 });
 
 export const walletKeysRelations = relations(walletKeysTable, ({ one }) => ({
-  agent: one(agentsTable),
+  agent: one(agentsTable, {
+    fields: [walletKeysTable.agentId],
+    references: [agentsTable.id],
+  }),
 }));

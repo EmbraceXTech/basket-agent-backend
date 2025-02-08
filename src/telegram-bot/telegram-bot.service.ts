@@ -40,7 +40,9 @@ export class TelegramBotService implements OnModuleInit {
     });
 
     if (config.nodeEnv === 'development') {
-      await this.bot.start();
+      this.bot.start().catch((err) => {
+        console.error(err);
+      });
     }
   }
 }
