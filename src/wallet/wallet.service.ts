@@ -22,12 +22,12 @@ export class WalletService implements OnModuleInit {
   }
 
   // TODO: create agent wallet + store in db
-  async createAgentWallet(agentId: string) {
+  async createAgentWallet() {
     // TODO: check if agent wallet already exists
     // TODO: check ownership of agent
     try {
       const coinbaseWallet = await this.createCoinbaseWallet();
-      this.agentWallets.set(agentId, coinbaseWallet);
+      // this.agentWallets.set(agentId, coinbaseWallet);
       return coinbaseWallet;
     } catch (e) {
       throw e;

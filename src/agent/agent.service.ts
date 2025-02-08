@@ -12,34 +12,66 @@ import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from 'src/db/schema';
 import { WithdrawTokenDto } from './dto/withdraw-token.dto';
 import { and, eq } from 'drizzle-orm';
+import { WalletService } from 'src/wallet/wallet.service';
 
 @Injectable()
 export class AgentService {
   constructor(
     @Inject(DrizzleAsyncProvider)
     private readonly db: NodePgDatabase<typeof schema>,
+    private readonly walletService: WalletService,
   ) {}
 
-  private userId = 1;
-
-  async findAll() {
+  async findAll(userId: string) {
     const agents = await this.db.query.agentsTable.findMany({
-      where: eq(schema.agentsTable.userId, this.userId),
+      where: eq(schema.agentsTable.userId, +userId),
     });
     return agents;
   }
 
-  async create(createAgentDto: CreateAgentDto) {
-    const agent = await this.db.insert(schema.agentsTable).values({
-      ...createAgentDto,
-      userId: this.userId,
+  async create(userId: string, createAgentDto: CreateAgentDto) {
+    const transaction = await this.db.transaction(async (tx) => {
+      const agent = await tx
+        .insert(schema.agentsTable)
+        .values({
+          ...createAgentDto,
+          userId: +userId,
+          selectedTokens: createAgentDto.selectedTokens.map((token) =>
+            JSON.stringify(token),
+          ),
+        } as typeof schema.agentsTable.$inferInsert)
+        .returning();
+
+      const agentWallet = await this.walletService.createAgentWallet();
+
+      await tx.insert(schema.walletKeysTable).values({
+        address: agentWallet.address,
+        ivString: agentWallet.ivString,
+        encryptedWalletData: agentWallet.encryptedWalletData,
+        agentId: agent[0].id,
+      });
+
+      if (createAgentDto.knowledges.length > 0) {
+        await tx.insert(schema.knowledgesTable).values(
+          createAgentDto.knowledges.map((knowledge) => ({
+            ...knowledge,
+            agentId: agent[0].id,
+          })),
+        );
+      }
+
+      return agent;
     });
-    return agent;
+    return transaction;
   }
 
   async findOne(id: string) {
     const agent = await this.db.query.agentsTable.findFirst({
       where: eq(schema.agentsTable.id, +id),
+      with: {
+        knowledge: true,
+        log: true,
+      },
     });
     return agent;
   }
@@ -92,33 +124,27 @@ export class AgentService {
   }
 
   async updateEndDate(id: string, updateEndDateDto: UpdateEndDateDto) {
-    const agent = await this.db
-      .update(schema.agentsTable)
-      .set({
-        ...updateEndDateDto,
-      })
-      .where(eq(schema.agentsTable.id, +id));
-    return agent;
+    // TODO: Implement updateEndDate logic
+    return {
+      id,
+      updateEndDateDto,
+    };
   }
 
   async updateStopLoss(id: string, updateStopLossDto: UpdateStopLossDto) {
-    const agent = await this.db
-      .update(schema.agentsTable)
-      .set({
-        ...updateStopLossDto,
-      })
-      .where(eq(schema.agentsTable.id, +id));
-    return agent;
+    // TODO: Implement updateStopLoss logic
+    return {
+      id,
+      updateStopLossDto,
+    };
   }
 
   async updateTakeProfit(id: string, updateTakeProfitDto: UpdateTakeProfitDto) {
-    const agent = await this.db
-      .update(schema.agentsTable)
-      .set({
-        ...updateTakeProfitDto,
-      })
-      .where(eq(schema.agentsTable.id, +id));
-    return agent;
+    // TODO: Implement updateTakeProfit logic
+    return {
+      id,
+      updateTakeProfitDto,
+    };
   }
 
   async start(id: string) {
