@@ -71,6 +71,11 @@ export class AgentService {
       with: {
         knowledge: true,
         log: true,
+        walletKey: {
+          columns: {
+            address: true,
+          },
+        },
       },
     });
     return agent;
