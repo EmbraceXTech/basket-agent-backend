@@ -1,0 +1,32 @@
+name: DEPLOY_PRODUCTION
+
+on:
+  push:
+    branches: [production]
+
+jobs:
+  Build:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@main
+
+      - name: Create .env file
+        run: |
+          cat << EOF > .env
+          NODE_ENV=${{secrets.NODE_ENV}}
+          DATABASE_URL=${{secrets.DATABASE_URL}}
+          AUTH_SECRET=${{secrets.AUTH_SECRET}}
+          TELEGRAM_BOT_TOKEN=${{secrets.TELEGRAM_BOT_TOKEN}}
+          PRIVY_APP_ID=${{secrets.PRIVY_APP_ID}}
+          PRIVY_APP_SECRET=${{secrets.PRIVY_APP_SECRET}}
+          CDP_API_KEY_NAME=${{secrets.CDP_API_KEY_NAME}}
+          CDP_API_KEY_PRIVATE_KEY=${{secrets.CDP_API_KEY_PRIVATE_KEY}}
+          CDP_SK_ENCRYPTION_KEY=${{secrets.CDP_SK_ENCRYPTION_KEY}}
+          OPENAI_API_KEY=${{secrets.OPENAI_API_KEY}}
+          EOF
+
+      - name: Run Docker Compose
+        run: docker compose up -d --no-deps --build --remove-orphans
+
+      - name: Run Docker System Prune
+        run: docker system prune -f

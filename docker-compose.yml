@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  basket-api:
+    container_name: basket-api
+    restart: always
+    build: .
+    ports:
+      - '4000:4000'
+    environment:
+      - NODE_ENV=${NODE_ENV}
+      - DATABASE_URL=${DATABASE_URL}
+      - AUTH_SECRET=${AUTH_SECRET}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - PRIVY_APP_ID=${PRIVY_APP_ID}
+      - PRIVY_APP_SECRET=${PRIVY_APP_SECRET}
+      - CDP_API_KEY_NAME=${CDP_API_KEY_NAME}
+      - CDP_API_KEY_PRIVATE_KEY=${CDP_API_KEY_PRIVATE_KEY}
+      - CDP_SK_ENCRYPTION_KEY=${CDP_SK_ENCRYPTION_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    network_mode: host
