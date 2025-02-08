@@ -10,6 +10,7 @@ import { AddKnowledgeDto } from './dto/add-knowledge.dto';
 import { DrizzleAsyncProvider } from 'src/db/drizzle.provider';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from 'src/db/schema';
+import { WithdrawTokenDto } from './dto/withdraw-token.dto';
 
 @Injectable()
 export class AgentService {
@@ -76,5 +77,9 @@ export class AgentService {
 
   updateTokens(id: string, updateTokensDto: UpdateTokensDto) {
     // TODO: Implement updateTokens logic
+  }
+
+  withdraw(id: string, withdrawTokenDto: WithdrawTokenDto) {
+    // TODO: Implement withdraw logic
   }
 }

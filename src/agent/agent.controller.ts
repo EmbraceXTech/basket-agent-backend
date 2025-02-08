@@ -16,6 +16,7 @@ import { UpdateStopLossDto } from './dto/update-stop-loss.dto';
 import { UpdateTakeProfitDto } from './dto/update-take-profit.dto';
 import { UpdateTokensDto } from './dto/update-tokens.dto';
 import { AddKnowledgeDto } from './dto/add-knowledge.dto';
+import { WithdrawTokenDto } from './dto/withdraw-token.dto';
 
 @Controller('agent')
 export class AgentController {
@@ -118,5 +119,13 @@ export class AgentController {
     @Body() updateTokensDto: UpdateTokensDto,
   ) {
     return this.agentService.updateTokens(id, updateTokensDto);
+  }
+
+  @Post(':id/withdraw')
+  withdraw(
+    @Param('id') id: string,
+    @Body() withdrawTokenDto: WithdrawTokenDto,
+  ) {
+    return this.agentService.withdraw(id, withdrawTokenDto);
   }
 }
