@@ -23,7 +23,9 @@ export const agentsTable = pgTable('agents', {
   userId: integer()
     .notNull()
     .references(() => usersTable.id),
-  walletKeyId: integer().references(() => walletKeysTable.id),
+  walletKeyId: integer()
+    .notNull()
+    .references(() => walletKeysTable.id),
   chainId: varchar({ length: 255 }).notNull(),
   selectedTokens: text('selected_tokens').array(),
   strategy: varchar({ length: 255 }).notNull(),
@@ -88,7 +90,6 @@ export const walletKeysTable = pgTable('wallet_keys', {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
   agentId: integer()
     .references(() => agentsTable.id)
-    .notNull()
     .unique(),
   walletAddress: varchar({ length: 255 }).notNull().unique(),
   walletKey: varchar({ length: 255 }).notNull(),
