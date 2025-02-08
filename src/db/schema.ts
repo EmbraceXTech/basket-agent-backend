@@ -20,6 +20,7 @@ export const usersRelations = relations(usersTable, ({ many }) => ({
 
 export const agentsTable = pgTable('agents', {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
+  name: varchar({ length: 255 }).notNull(),
   userId: integer()
     .notNull()
     .references(() => usersTable.id),
@@ -28,7 +29,7 @@ export const agentsTable = pgTable('agents', {
     .references(() => walletKeysTable.id),
   chainId: varchar({ length: 255 }).notNull(),
   selectedTokens: text('selected_tokens').array(),
-  strategy: varchar({ length: 255 }).notNull(),
+  strategy: text().notNull(),
   intervalSeconds: integer().notNull(),
   endDate: timestamp('end_date').notNull(),
   stopLossUSD: integer().notNull(),

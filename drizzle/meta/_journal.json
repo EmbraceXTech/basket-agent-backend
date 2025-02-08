@@ -15,6 +15,13 @@
       "when": 1739034281294,
       "tag": "0001_pretty_giant_man",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1739039014279,
+      "tag": "0002_tidy_vance_astro",
+      "breakpoints": true
     }
   ]
 }

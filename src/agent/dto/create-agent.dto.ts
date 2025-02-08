@@ -12,6 +12,10 @@ import { TokenDto } from './token.dto';
 export class CreateAgentDto {
   @IsNotEmpty()
   @IsString()
+  name: string;
+
+  @IsNotEmpty()
+  @IsString()
   chainId: string;
 
   @IsArray()
