@@ -7,4 +7,5 @@ export const config = {
   port: process.env.PORT || 4000,
   databaseUrl: process.env.DATABASE_URL || '',
   telegramBotToken: process.env.TELEGRAM_BOT_TOKEN || '',
+  authSecret: process.env.AUTH_SECRET || '',
 };

@@ -1,10 +1,10 @@
 CREATE TABLE "agents" (
 	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "agents_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647 START WITH 1 CACHE 1),
 	"userId" integer NOT NULL,
+	"walletKeyId" integer,
 	"chainId" varchar(255) NOT NULL,
 	"selected_tokens" text[],
 	"strategy" varchar(255) NOT NULL,
-	"walletAddress" varchar(255) NOT NULL,
 	"intervalSeconds" integer NOT NULL,
 	"end_date" timestamp NOT NULL,
 	"stopLossUSD" integer NOT NULL,
@@ -38,6 +38,18 @@ CREATE TABLE "users" (
 	CONSTRAINT "users_telegramId_unique" UNIQUE("telegramId")
 );
 --> statement-breakpoint
+CREATE TABLE "wallet_keys" (
+	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "wallet_keys_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647 START WITH 1 CACHE 1),
+	"agentId" integer NOT NULL,
+	"walletAddress" varchar(255) NOT NULL,
+	"walletKey" varchar(255) NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "wallet_keys_agentId_unique" UNIQUE("agentId"),
+	CONSTRAINT "wallet_keys_walletAddress_unique" UNIQUE("walletAddress")
+);
+--> statement-breakpoint
 ALTER TABLE "agents" ADD CONSTRAINT "agents_userId_users_id_fk" FOREIGN KEY ("userId") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "agents" ADD CONSTRAINT "agents_walletKeyId_wallet_keys_id_fk" FOREIGN KEY ("walletKeyId") REFERENCES "public"."wallet_keys"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "knowledges" ADD CONSTRAINT "knowledges_agentId_agents_id_fk" FOREIGN KEY ("agentId") REFERENCES "public"."agents"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "logs" ADD CONSTRAINT "logs_agentId_agents_id_fk" FOREIGN KEY ("agentId") REFERENCES "public"."agents"("id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "logs" ADD CONSTRAINT "logs_agentId_agents_id_fk" FOREIGN KEY ("agentId") REFERENCES "public"."agents"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "wallet_keys" ADD CONSTRAINT "wallet_keys_agentId_agents_id_fk" FOREIGN KEY ("agentId") REFERENCES "public"."agents"("id") ON DELETE no action ON UPDATE no action;

@@ -23,10 +23,6 @@ export class CreateAgentDto {
   @IsString()
   strategy: string;
 
-  @IsNotEmpty()
-  @IsString()
-  walletAddress: string;
-
   @IsInt()
   @Min(1)
   intervalSeconds: number;

@@ -23,10 +23,10 @@ export const agentsTable = pgTable('agents', {
   userId: integer()
     .notNull()
     .references(() => usersTable.id),
+  walletKeyId: integer().references(() => walletKeysTable.id),
   chainId: varchar({ length: 255 }).notNull(),
   selectedTokens: text('selected_tokens').array(),
   strategy: varchar({ length: 255 }).notNull(),
-  walletAddress: varchar({ length: 255 }).notNull(),
   intervalSeconds: integer().notNull(),
   endDate: timestamp('end_date').notNull(),
   stopLossUSD: integer().notNull(),
@@ -39,6 +39,10 @@ export const agentsRelations = relations(agentsTable, ({ one, many }) => ({
   user: one(usersTable, {
     fields: [agentsTable.userId],
     references: [usersTable.id],
+  }),
+  walletKey: one(walletKeysTable, {
+    fields: [agentsTable.walletKeyId],
+    references: [walletKeysTable.id],
   }),
   logs: many(logsTable),
   knowledge: one(knowledgesTable),
@@ -78,4 +82,19 @@ export const knowledgesRelations = relations(knowledgesTable, ({ one }) => ({
     fields: [knowledgesTable.agentId],
     references: [agentsTable.id],
   }),
+}));
+
+export const walletKeysTable = pgTable('wallet_keys', {
+  id: integer().primaryKey().generatedAlwaysAsIdentity(),
+  agentId: integer()
+    .references(() => agentsTable.id)
+    .notNull()
+    .unique(),
+  walletAddress: varchar({ length: 255 }).notNull().unique(),
+  walletKey: varchar({ length: 255 }).notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+export const walletKeysRelations = relations(walletKeysTable, ({ one }) => ({
+  agent: one(agentsTable),
 }));

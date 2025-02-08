@@ -1,26 +1,37 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { Bot } from 'grammy';
+import { AuthService } from 'src/auth/auth.service';
 import { config } from 'src/config';
 
 @Injectable()
 export class TelegramBotService implements OnModuleInit {
   private bot: Bot;
 
-  constructor() {
+  constructor(private authService: AuthService) {
     this.bot = new Bot(config.telegramBotToken);
   }
 
   async onModuleInit() {
     this.bot.command('start', async (ctx) => {
       const user = ctx.from;
-      console.log({ user });
+
+      const accessToken = await this.authService.loginWithTelegram(
+        user.id.toString(),
+      );
+
+      const url = `https://basket-agent-mini-app.vercel.app?accessToken=${accessToken}`;
+
+      console.log({ url });
+
       await ctx.reply('Welcome to Basket Agent!', {
         reply_markup: {
           inline_keyboard: [
             [
               {
                 text: 'Basket Agent App',
-                web_app: { url: 'https://basket-agent-mini-app.vercel.app' },
+                web_app: {
+                  url,
+                },
               },
             ],
           ],
@@ -28,10 +39,6 @@ export class TelegramBotService implements OnModuleInit {
       });
     });
 
-    try {
-      await this.bot.start();
-    } catch (error) {
-      console.error('telegram bot failed to start', error);
-    }
+    await this.bot.start();
   }
 }

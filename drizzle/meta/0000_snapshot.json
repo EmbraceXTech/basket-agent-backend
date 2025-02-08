@@ -1,5 +1,5 @@
 {
-  "id": "5ca2c655-278b-45d4-82e7-8e000ebbc040",
+  "id": "f5db4597-560b-4202-a3d2-8eeffe11bd00",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -31,6 +31,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "walletKeyId": {
+          "name": "walletKeyId",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "chainId": {
           "name": "chainId",
           "type": "varchar(255)",
@@ -45,12 +51,6 @@
         },
         "strategy": {
           "name": "strategy",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "walletAddress": {
-          "name": "walletAddress",
           "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true
@@ -102,6 +102,19 @@
           "tableTo": "users",
           "columnsFrom": [
             "userId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "agents_walletKeyId_wallet_keys_id_fk": {
+          "name": "agents_walletKeyId_wallet_keys_id_fk",
+          "tableFrom": "agents",
+          "tableTo": "wallet_keys",
+          "columnsFrom": [
+            "walletKeyId"
           ],
           "columnsTo": [
             "id"
@@ -310,6 +323,90 @@
           "nullsNotDistinct": false,
           "columns": [
             "telegramId"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.wallet_keys": {
+      "name": "wallet_keys",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "wallet_keys_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "agentId": {
+          "name": "agentId",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "walletAddress": {
+          "name": "walletAddress",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "walletKey": {
+          "name": "walletKey",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "wallet_keys_agentId_agents_id_fk": {
+          "name": "wallet_keys_agentId_agents_id_fk",
+          "tableFrom": "wallet_keys",
+          "tableTo": "agents",
+          "columnsFrom": [
+            "agentId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "wallet_keys_agentId_unique": {
+          "name": "wallet_keys_agentId_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "agentId"
+          ]
+        },
+        "wallet_keys_walletAddress_unique": {
+          "name": "wallet_keys_walletAddress_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "walletAddress"
           ]
         }
       },
