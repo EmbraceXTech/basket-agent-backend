@@ -1,3 +1,7 @@
+import { IsInt, Min } from 'class-validator';
+
 export class UpdateStopLossDto {
-  // TODO: Add properties
+  @IsInt()
+  @Min(0)
+  stopLossUSD: number;
 }

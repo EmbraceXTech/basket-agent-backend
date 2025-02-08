@@ -1,3 +1,7 @@
+import { IsNotEmpty, IsString } from 'class-validator';
+
 export class UpdateStrategyDto {
-  // TODO: Add properties
+  @IsNotEmpty()
+  @IsString()
+  strategy: string;
 }

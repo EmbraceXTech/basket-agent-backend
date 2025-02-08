@@ -1,3 +1,6 @@
+import { IsNotEmpty } from 'class-validator';
+
 export class UpdateEndDateDto {
-  // TODO: Add properties
+  @IsNotEmpty()
+  endDate: Date;
 }

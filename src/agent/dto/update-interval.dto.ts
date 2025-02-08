@@ -1,3 +1,7 @@
+import { IsInt, Min } from 'class-validator';
+
 export class UpdateIntervalDto {
-  // TODO: Add properties
+  @IsInt()
+  @Min(1)
+  intervalSeconds: number;
 }

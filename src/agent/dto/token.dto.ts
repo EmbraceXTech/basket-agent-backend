@@ -1,11 +1,11 @@
 import { IsNotEmpty, IsString } from 'class-validator';
 
-export class AddKnowledgeDto {
-  @IsNotEmpty()
+export class TokenDto {
   @IsString()
-  name: string;
+  @IsNotEmpty()
+  tokenSymbol: string;
 
-  @IsNotEmpty()
   @IsString()
-  content: string;
+  @IsNotEmpty()
+  tokenAddress: string;
 }
