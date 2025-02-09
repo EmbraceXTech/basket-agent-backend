@@ -1,4 +1,4 @@
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsArray,
   IsDate,
@@ -44,6 +44,11 @@ export class CreateAgentDto {
   intervalSeconds: number;
 
   @IsOptional()
+  @Transform(({ value }) => {
+    if (!value) return null;
+    const date = new Date(value);
+    return isNaN(date.getTime()) ? null : date; // Ensure valid Date
+  })
   @IsDate()
   endDate?: Date;
 
