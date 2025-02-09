@@ -7,6 +7,7 @@ import { DrizzleAsyncProvider } from 'src/db/drizzle.provider';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from 'src/db/schema';
 import { eq } from 'drizzle-orm';
+import { COINBASE_CHAIN_ID_HEX_MAP } from './constants/coinbase.const';
 
 @Injectable()
 export class WalletService implements OnModuleInit {
@@ -22,14 +23,16 @@ export class WalletService implements OnModuleInit {
     });
   }
 
-  async createAgentWallet() {
-    return this.createCoinbaseWallet();
+  async createAgentWallet(chainIdHex: string) {
+    return this.createCoinbaseWallet(chainIdHex);
   }
 
   async getBalance(agentId: string) {
     try {
       const wallet = await this.getCoinbaseWallet(agentId);
+      console.log('wallet', wallet);
       const balances = await wallet.listBalances();
+      console.log('balances', balances);
       return {
         balances: Array.from(balances),
       };
@@ -111,10 +114,10 @@ export class WalletService implements OnModuleInit {
     }
   }
 
-  private async createCoinbaseWallet() {
+  private async createCoinbaseWallet(chainIdHex: string) {
     try {
       const wallet = await Wallet.create({
-        networkId: Coinbase.networks.BaseSepolia,
+        networkId: COINBASE_CHAIN_ID_HEX_MAP[chainIdHex].id,
       });
       const iv = crypto.randomBytes(16);
       const encryptedWalletData = this.encrypt(

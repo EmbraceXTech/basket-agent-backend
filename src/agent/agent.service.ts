@@ -13,6 +13,7 @@ import * as schema from 'src/db/schema';
 import { WithdrawTokenDto } from './wallet/dto/withdraw-token.dto';
 import { and, eq } from 'drizzle-orm';
 import { WalletService } from './wallet/wallet.service';
+import { COINBASE_CHAIN_ID_HEX_MAP, DEFAULT_CHAIN_ID } from './wallet/constants/coinbase.const';
 
 @Injectable()
 export class AgentService {
@@ -30,6 +31,10 @@ export class AgentService {
   }
 
   async create(userId: string, createAgentDto: CreateAgentDto) {
+
+    const chainInfo = COINBASE_CHAIN_ID_HEX_MAP[createAgentDto.chainId] || DEFAULT_CHAIN_ID;
+
+
     const transaction = await this.db.transaction(async (tx) => {
       const agent = await tx
         .insert(schema.agentsTable)
@@ -39,10 +44,11 @@ export class AgentService {
           selectedTokens: createAgentDto.selectedTokens.map((token) =>
             JSON.stringify(token),
           ),
+          chainId: chainInfo.chainIdHex,
         } as typeof schema.agentsTable.$inferInsert)
         .returning();
 
-      const agentWallet = await this.walletService.createAgentWallet();
+      const agentWallet = await this.walletService.createAgentWallet(chainInfo.chainIdHex);
 
       await tx.insert(schema.walletKeysTable).values({
         address: agentWallet.address,
