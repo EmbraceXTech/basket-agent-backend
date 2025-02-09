@@ -10,9 +10,9 @@ import { AddKnowledgeDto } from './dto/add-knowledge.dto';
 import { DrizzleAsyncProvider } from 'src/db/drizzle.provider';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from 'src/db/schema';
-import { WithdrawTokenDto } from './dto/withdraw-token.dto';
+import { WithdrawTokenDto } from './wallet/dto/withdraw-token.dto';
 import { and, eq } from 'drizzle-orm';
-import { WalletService } from 'src/wallet/wallet.service';
+import { WalletService } from './wallet/wallet.service';
 
 @Injectable()
 export class AgentService {

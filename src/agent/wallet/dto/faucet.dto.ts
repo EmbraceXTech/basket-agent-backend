@@ -1,7 +1,7 @@
 import { IsNotEmpty, IsNumber, IsString } from "class-validator";
 
-export class CreateAgentWalletDto {
+export class FaucetDto {
   @IsNotEmpty()
   @IsString()
-  agentId: string;
+  token: string;
 }
