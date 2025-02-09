@@ -1,11 +1,11 @@
 import { IsNotEmpty, IsNumber, IsString } from "class-validator";
 
-export class TestFaucetDto {
+export class SellDto {
   @IsNotEmpty()
   @IsString()
-  agentId: string;
+  tokenAddress: string;
 
   @IsNotEmpty()
-  @IsString()
-  token: string;
+  @IsNumber()
+  tokenAmount: number;
 }

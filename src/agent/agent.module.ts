@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AgentController } from './agent.controller';
 import { AgentService } from './agent.service';
-import { WalletModule } from 'src/wallet/wallet.module';
+import { WalletModule } from './wallet/wallet.module';
 
 @Module({
   imports: [WalletModule],

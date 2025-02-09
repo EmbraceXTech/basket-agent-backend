@@ -10,9 +10,13 @@ import { AddKnowledgeDto } from './dto/add-knowledge.dto';
 import { DrizzleAsyncProvider } from 'src/db/drizzle.provider';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from 'src/db/schema';
-import { WithdrawTokenDto } from './dto/withdraw-token.dto';
+import { WithdrawTokenDto } from './wallet/dto/withdraw-token.dto';
 import { and, eq } from 'drizzle-orm';
-import { WalletService } from 'src/wallet/wallet.service';
+import { WalletService } from './wallet/wallet.service';
+import {
+  COINBASE_CHAIN_ID_HEX_MAP,
+  DEFAULT_CHAIN_ID,
+} from './wallet/constants/coinbase-chain.const';
 
 @Injectable()
 export class AgentService {
@@ -30,6 +34,9 @@ export class AgentService {
   }
 
   async create(userId: string, createAgentDto: CreateAgentDto) {
+    const chainInfo =
+      COINBASE_CHAIN_ID_HEX_MAP[createAgentDto.chainId] || DEFAULT_CHAIN_ID;
+
     const transaction = await this.db.transaction(async (tx) => {
       const agent = await tx
         .insert(schema.agentsTable)
@@ -39,10 +46,16 @@ export class AgentService {
           selectedTokens: createAgentDto.selectedTokens.map((token) =>
             JSON.stringify(token),
           ),
+          endDate: createAgentDto.endDate
+            ? new Date(createAgentDto.endDate)
+            : null,
+          chainId: chainInfo.chainIdHex,
         } as typeof schema.agentsTable.$inferInsert)
         .returning();
 
-      const agentWallet = await this.walletService.createAgentWallet();
+      const agentWallet = await this.walletService.createAgentWallet(
+        chainInfo.chainIdHex,
+      );
 
       await tx.insert(schema.walletKeysTable).values({
         address: agentWallet.address,
