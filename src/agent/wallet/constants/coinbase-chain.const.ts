@@ -24,4 +24,9 @@ export const COINBASE_CHAIN_ID_HEX_MAP = COINBASE_CHAINS.reduce((acc, chain) => 
     return acc;
 }, {} as Record<string, CoinbaseChainInfo>);
 
+export const COINBASE_NETWORK_ID_MAP = COINBASE_CHAINS.reduce((acc, chain) => {
+    acc[chain.id] = chain;
+    return acc;
+}, {} as Record<string, CoinbaseChainInfo>);
+
 export const DEFAULT_CHAIN_ID = COINBASE_CHAINS[1] // Default as mainnet

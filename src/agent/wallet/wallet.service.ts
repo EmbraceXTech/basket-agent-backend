@@ -7,7 +7,13 @@ import { DrizzleAsyncProvider } from 'src/db/drizzle.provider';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from 'src/db/schema';
 import { eq } from 'drizzle-orm';
-import { COINBASE_CHAIN_ID_HEX_MAP } from './constants/coinbase.const';
+import { COINBASE_CHAIN_ID_HEX_MAP } from './constants/coinbase-chain.const';
+import {
+  COINBASE_ASSET_MAP,
+  USDC_ASSET_MAP,
+} from './constants/coinbase-asset.const';
+import { SellDto } from './dto/sell.dto';
+import { BuyDto } from './dto/buy.dto';
 
 @Injectable()
 export class WalletService implements OnModuleInit {
@@ -30,9 +36,7 @@ export class WalletService implements OnModuleInit {
   async getBalance(agentId: string) {
     try {
       const wallet = await this.getCoinbaseWallet(agentId);
-      console.log('wallet', wallet);
       const balances = await wallet.listBalances();
-      console.log('balances', balances);
       return {
         balances: Array.from(balances),
       };
@@ -44,6 +48,13 @@ export class WalletService implements OnModuleInit {
   async findByAgentId(agentId: string) {
     const result = await this.db.query.walletKeysTable.findFirst({
       where: eq(schema.walletKeysTable.agentId, +agentId),
+    });
+    return result;
+  }
+
+  async findAgentById(agentId: string) {
+    const result = await this.db.query.agentsTable.findFirst({
+      where: eq(schema.agentsTable.id, +agentId),
     });
     return result;
   }
@@ -87,6 +98,49 @@ export class WalletService implements OnModuleInit {
     } catch (e) {
       throw e;
     }
+  }
+
+  async buyAsset(agentId: string, buyDto: BuyDto) {
+    const agent = await this.findAgentById(agentId);
+    const usdcAsset = USDC_ASSET_MAP[agent.chainId];
+    return this.trade(
+      agentId,
+      usdcAsset.tokenAddress,
+      buyDto.tokenAddress,
+      buyDto.usdAmount,
+    );
+  }
+
+  async sellAsset(agentId: string, sellDto: SellDto) {
+    const agent = await this.findAgentById(agentId);
+    const usdcAsset = USDC_ASSET_MAP[agent.chainId];
+    return this.trade(
+      agentId,
+      sellDto.tokenAddress,
+      usdcAsset.tokenAddress,
+      sellDto.tokenAmount,
+    );
+  }
+
+  async trade(
+    agentId: string,
+    inputTokenAddress: string,
+    outputTokenAddress: string,
+    amount: number,
+  ) {
+    const agent = await this.findAgentById(agentId);
+    const agentWallet = await this.getCoinbaseWallet(agentId);
+    const assets = COINBASE_ASSET_MAP[agent.chainId];
+    const inputAsset = assets[inputTokenAddress];
+    const outputAsset = assets[outputTokenAddress];
+    const trade = await agentWallet.createTrade({
+      amount,
+      fromAssetId: inputAsset.coinbaseAssetId,
+      toAssetId: outputAsset.coinbaseAssetId,
+    });
+
+    // Wait for the trade to settle.
+    return await trade.wait();
   }
 
   async faucet(agentId: string, token: string) {

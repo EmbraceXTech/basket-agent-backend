@@ -24,6 +24,8 @@ import { ValidateAgentOwner } from 'src/common/decorators/validate-agent-owner.d
 import { ValidateUser } from 'src/common/decorators/validate-user.decorator';
 import { WalletService } from './wallet/wallet.service';
 import { FaucetDto } from './wallet/dto/faucet.dto';
+import { BuyDto } from './wallet/dto/buy.dto';
+import { SellDto } from './wallet/dto/sell.dto';
 
 @Controller('agent')
 export class AgentController {
@@ -160,6 +162,24 @@ export class AgentController {
     @Body() withdrawTokenDto: WithdrawTokenDto,
   ) {
     return this.walletService.withdraw(agentId, withdrawTokenDto);
+  }
+
+  @UseGuards(AgentGuard)
+  @Post(':agentId/wallet/buy-asset')
+  buyAsset(
+    @ValidateAgentOwner() agentId: string,
+    @Body() buyDto: BuyDto,
+  ) {
+    return this.walletService.buyAsset(agentId, buyDto);
+  }
+
+  @UseGuards(AgentGuard)
+  @Post(':agentId/wallet/sell-asset')
+  sellAsset(
+    @ValidateAgentOwner() agentId: string,
+    @Body() sellDto: SellDto,
+  ) {
+    return this.walletService.sellAsset(agentId, sellDto);
   }
 
   @UseGuards(AgentGuard)

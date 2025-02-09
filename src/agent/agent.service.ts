@@ -13,7 +13,7 @@ import * as schema from 'src/db/schema';
 import { WithdrawTokenDto } from './wallet/dto/withdraw-token.dto';
 import { and, eq } from 'drizzle-orm';
 import { WalletService } from './wallet/wallet.service';
-import { COINBASE_CHAIN_ID_HEX_MAP, DEFAULT_CHAIN_ID } from './wallet/constants/coinbase.const';
+import { COINBASE_CHAIN_ID_HEX_MAP, DEFAULT_CHAIN_ID } from './wallet/constants/coinbase-chain.const';
 
 @Injectable()
 export class AgentService {
