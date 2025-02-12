@@ -40,7 +40,7 @@ export class PriceService {
         if (result.status === 'fulfilled' && result.value) {
           const index = nullResultIndices[i];
           priceResults[index] = {
-            asset: upperCaseTokens[index],
+            token: upperCaseTokens[index],
             price: Number(result.value),
             source: 'binance',
             quote: 'USDC',
@@ -65,7 +65,7 @@ export class PriceService {
         if (result.status === 'fulfilled' && result.value) {
           const index = nullResultIndices[i];
           priceResults[index] = {
-            asset: upperCaseTokens[index],
+            token: upperCaseTokens[index],
             price: Number(result.value),
             source: 'binance',
             quote: 'USDT',
@@ -91,7 +91,7 @@ export class PriceService {
         if (price) {
           const index = nullResultIndices[i];
           priceResults[index] = {
-            asset: upperCaseTokens[index],
+            token: upperCaseTokens[index],
             price: Number(price),
             source: 'oneinch',
             quote: 'USD',

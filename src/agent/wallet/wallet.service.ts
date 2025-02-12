@@ -14,12 +14,14 @@ import {
 } from './constants/coinbase-asset.const';
 import { SellDto } from './dto/sell.dto';
 import { BuyDto } from './dto/buy.dto';
+import { PriceService } from 'src/price/price.service';
 
 @Injectable()
 export class WalletService implements OnModuleInit {
   constructor(
     @Inject(DrizzleAsyncProvider)
     private readonly db: NodePgDatabase<typeof schema>,
+    private priceService: PriceService
   ) {}
 
   onModuleInit() {
@@ -37,8 +39,17 @@ export class WalletService implements OnModuleInit {
     try {
       const wallet = await this.getCoinbaseWallet(agentId);
       const balances = await wallet.listBalances();
+      const tokenBalances = Array.from(balances).filter(([asset]) => asset !== Coinbase.assets.Usdc);
+      const prices = await this.priceService.getPrices(tokenBalances.map(([asset]) => asset));
+      const priceMap = new Map(prices.map((price) => [price.token, price]));
+      const tokenValueUSD = tokenBalances.reduce((acc, [asset, balance]) => {
+        const price = priceMap.get(asset.toUpperCase());
+        return acc + Number(balance) * Number(price.price);
+      }, 0);
+      const totalValueUSD = tokenValueUSD + Number(balances.get(Coinbase.assets.Usdc));
       return {
-        balances: Array.from(balances),
+        tokens: Array.from(balances),
+        balance: totalValueUSD,
       };
     } catch (e) {
       throw e;

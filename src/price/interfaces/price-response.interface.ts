@@ -1,5 +1,5 @@
 export interface PriceResponse {
-    asset: string;
+    token: string;
     source: string;
     quote: string;
     price: number;
