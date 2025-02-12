@@ -166,19 +166,13 @@ export class AgentController {
 
   @UseGuards(AgentGuard)
   @Post(':agentId/wallet/buy-asset')
-  buyAsset(
-    @ValidateAgentOwner() agentId: string,
-    @Body() buyDto: BuyDto,
-  ) {
+  buyAsset(@ValidateAgentOwner() agentId: string, @Body() buyDto: BuyDto) {
     return this.walletService.buyAsset(agentId, buyDto);
   }
 
   @UseGuards(AgentGuard)
   @Post(':agentId/wallet/sell-asset')
-  sellAsset(
-    @ValidateAgentOwner() agentId: string,
-    @Body() sellDto: SellDto,
-  ) {
+  sellAsset(@ValidateAgentOwner() agentId: string, @Body() sellDto: SellDto) {
     return this.walletService.sellAsset(agentId, sellDto);
   }
 

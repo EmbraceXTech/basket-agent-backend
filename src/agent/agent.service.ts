@@ -17,6 +17,7 @@ import {
   COINBASE_CHAIN_ID_HEX_MAP,
   DEFAULT_CHAIN_ID,
 } from './wallet/constants/coinbase-chain.const';
+import { AgentQueueProducer } from './agent-queue/agent-queue.producer';
 
 @Injectable()
 export class AgentService {
@@ -24,6 +25,7 @@ export class AgentService {
     @Inject(DrizzleAsyncProvider)
     private readonly db: NodePgDatabase<typeof schema>,
     private readonly walletService: WalletService,
+    private readonly agentQueueProducer: AgentQueueProducer,
   ) {}
 
   async findAll(userId: string) {
@@ -58,9 +60,7 @@ export class AgentService {
       );
 
       await tx.insert(schema.walletKeysTable).values({
-        address: agentWallet.address,
-        ivString: agentWallet.ivString,
-        encryptedWalletData: agentWallet.encryptedWalletData,
+        ...agentWallet,
         agentId: agent[0].id,
       });
 
