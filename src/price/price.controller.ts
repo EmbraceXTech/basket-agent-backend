@@ -5,12 +5,12 @@ import { PriceService } from './price.service';
 export class PriceController {
   constructor(private readonly priceService: PriceService) {}
 
-  @Get(':token')
-  async getPrice(@Param('token') token: string) {
+  @Get('/:tokens')
+  async getPrices(@Param('tokens') tokens: string) {
     try {
-      return await this.priceService.getPrice(token);
+      return await this.priceService.getPrices(tokens.split(','));
     } catch (e) {
-      throw new NotFoundException(`Token ${token} price not found`);
+      throw new NotFoundException(`Tokens ${tokens} price not found`);
     }
   }
 }

@@ -5,53 +5,101 @@ import { BinancePriceResponse } from './interfaces/binance-response.interface';
 import { PriceResponse } from './interfaces/price-response.interface';
 import { OneInchPriceResponse } from './interfaces/oneinch-response.interface';
 import { TokenService } from 'src/token/token.service';
+import { TokenInfo } from 'src/token/interfaces/token-info.interface';
 
 @Injectable()
 export class PriceService {
   constructor(private readonly tokenService: TokenService) {}
 
-  async getPrice(token: string, chainId = config.defaultChainId) {
-    const upperCaseToken = token.toUpperCase();
+  async getPrices(tokens: string[], chainId = config.defaultChainId) {
+    const upperCaseTokens = tokens.map((token) => token.toUpperCase());
 
-    const isTokenAvailable = config.availableTokens.includes(upperCaseToken);
-    if (!isTokenAvailable) {
-      throw new Error(`Token ${upperCaseToken} is not available`);
+    const foundUnavailableTokens = upperCaseTokens.filter(
+      (token) => !config.availableTokens.includes(token),
+    );
+    if (foundUnavailableTokens.length > 0) {
+      throw new Error(
+        `Tokens ${foundUnavailableTokens.join(', ')} are not available`,
+      );
     }
 
-    let priceResult: PriceResponse | null = null;
+    let priceResults: (PriceResponse | null)[] = [];
     try {
-        const priceUsdc = await this.getPriceFromBinanceUSDC(upperCaseToken);
-        priceResult = {
-            asset: upperCaseToken,
-            price: Number(priceUsdc),
+      const nullResultIndices: number[] = [];
+      upperCaseTokens.forEach((_, index) => {
+        if (!priceResults[index]) {
+          nullResultIndices.push(index);
+        }
+      });
+      if (nullResultIndices.length === 0) return priceResults;
+      const targetTokens = upperCaseTokens.filter((_, index) => nullResultIndices.includes(index));
+      const priceUsdcResults = await Promise.allSettled(
+        targetTokens.map(this.getPriceFromBinanceUSDC),
+      );
+      priceUsdcResults.forEach((result, i) => {
+        if (result.status === 'fulfilled' && result.value) {
+          const index = nullResultIndices[i];
+          priceResults[index] = {
+            asset: upperCaseTokens[index],
+            price: Number(result.value),
             source: 'binance',
             quote: 'USDC',
-        };
-        return priceResult;
+          };
+        }
+      });
     } catch (e) {}
 
     try {
-        const priceUsdt = await this.getPriceFromBinanceUSDT(upperCaseToken);
-        priceResult = {
-            asset: upperCaseToken,
-            price: Number(priceUsdt),
+      const nullResultIndices: number[] = [];
+      upperCaseTokens.forEach((_, index) => {
+        if (!priceResults[index]) {
+          nullResultIndices.push(index);
+        }
+      });
+      if (nullResultIndices.length === 0) return priceResults;
+      const targetTokens = upperCaseTokens.filter((_, index) => nullResultIndices.includes(index));
+      const priceUsdtResults = await Promise.allSettled(
+        targetTokens.map(this.getPriceFromBinanceUSDT),
+      );
+      priceUsdtResults.forEach((result, i) => {
+        if (result.status === 'fulfilled' && result.value) {
+          const index = nullResultIndices[i];
+          priceResults[index] = {
+            asset: upperCaseTokens[index],
+            price: Number(result.value),
             source: 'binance',
             quote: 'USDT',
-        };
-        return priceResult;
+          };
+        }
+      });
     } catch (e) {}
 
     try {
-      const priceOneInch = await this.getPriceFromOneInch(upperCaseToken, chainId);
-      priceResult = {
-        asset: upperCaseToken,
-        price: Number(priceOneInch),
-        source: 'oneinch',
-        quote: 'USDC',
-      };
-      return priceResult;
+      const nullResultIndices: number[] = [];
+      upperCaseTokens.forEach((_, index) => {
+        if (!priceResults[index]) {
+          nullResultIndices.push(index);
+        }
+      });
+      if (nullResultIndices.length === 0) return priceResults;
+      const targetTokens = upperCaseTokens.filter((_, index) => nullResultIndices.includes(index));
+      const priceOneInchResults = await this.getPriceFromOneInch(
+        targetTokens,
+        chainId,
+      );
+      priceOneInchResults.forEach((price, i) => {
+        if (price) {
+          const index = nullResultIndices[i];
+          priceResults[index] = {
+            asset: upperCaseTokens[index],
+            price: Number(price),
+            source: 'oneinch',
+            quote: 'USD',
+          };
+        }
+      });
     } catch (e) {}
-    return priceResult;
+    return priceResults;
   }
 
   async getPriceFromBinanceUSDC(token: string) {
@@ -72,17 +120,27 @@ export class PriceService {
       .then((response) => response.data.price);
   }
 
-  async getPriceFromOneInch(token: string, chainId = config.defaultChainId) {
+  async getPriceFromOneInch(tokens: string[], chainId = config.defaultChainId) {
     const url = `${config.oneinchApiEndpoint}/price/v1.1/${chainId}`;
-    const tokens = await this.tokenService.getAvailableTokens(chainId);
-    const tokenInfo = tokens.find((t) => t.symbol === token);
-    if (!tokenInfo) throw new Error(`Token ${token} not found`);
+    const availableTokens = await this.tokenService.getAvailableTokens(chainId);
+    const tokenMap = availableTokens.reduce(
+      (acc, token) => {
+        acc[token.symbol] = token;
+        return acc;
+      },
+      {} as Record<string, TokenInfo>,
+    );
+    const tokenInfoList = tokens.map((t) => tokenMap[t]);
+    if (!tokenInfoList.every((t) => t)) {
+      const notFoundTokens = tokens.filter((t) => !tokenMap[t]);
+      throw new Error(`Tokens ${notFoundTokens.join(', ')} not found`);
+    }
 
     return axios
       .post<OneInchPriceResponse>(
         url,
         {
-          tokens: [tokenInfo.address],
+          tokens: tokenInfoList.map((t) => t.address),
           currency: 'USD',
         },
         {
@@ -91,6 +149,11 @@ export class PriceService {
           },
         },
       )
-      .then((response) => response.data[tokenInfo.address]);
+      .then((response) => {
+        const result = tokenInfoList.map((tokenInfo) => {
+          return Number(response.data[tokenInfo.address]);
+        });
+        return result;
+      });
   }
 }
