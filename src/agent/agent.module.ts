@@ -13,6 +13,7 @@ import { AgentQueueProducer } from './agent-queue/agent-queue.producer';
 import { AgentExecuteConsumer } from './agent-queue/agent-execute.consumer';
 import { AgentEndDtConsumer } from './agent-queue/agent-end-dt.consumer';
 import { AgentSLTPConsumer } from './agent-queue/agent-sl-tp.consumer';
+import { config } from 'src/config';
 
 @Module({
   imports: [
@@ -32,9 +33,9 @@ import { AgentSLTPConsumer } from './agent-queue/agent-sl-tp.consumer';
   providers: [
     AgentService,
     AgentQueueProducer,
-    AgentExecuteConsumer,
-    AgentEndDtConsumer,
-    AgentSLTPConsumer,
+    ...(config.nodeEnv === 'development'
+      ? [AgentExecuteConsumer, AgentEndDtConsumer, AgentSLTPConsumer]
+      : []),
   ],
 })
 export class AgentModule {}
