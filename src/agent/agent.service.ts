@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { CreateAgentDto } from './dto/create-agent.dto';
 import { UpdateStrategyDto } from './dto/update-strategy.dto';
 import { UpdateIntervalDto } from './dto/update-interval.dto';
@@ -107,7 +107,8 @@ export class AgentService {
       .set({
         strategy: updateStrategyDto.strategy,
       })
-      .where(eq(schema.agentsTable.id, +id));
+      .where(eq(schema.agentsTable.id, +id))
+      .execute();
     return agent;
   }
 
@@ -127,63 +128,122 @@ export class AgentService {
           eq(schema.knowledgesTable.id, +knowledgeId),
           eq(schema.knowledgesTable.agentId, +id),
         ),
-      );
+      )
+      .execute();
     return knowledge;
   }
 
+  async updateStopLoss(id: string, updateStopLossDto: UpdateStopLossDto) {
+    const agent = await this.db
+      .update(schema.agentsTable)
+      .set({
+        stopLossUSD: updateStopLossDto.stopLossUSD,
+      } as Partial<typeof schema.agentsTable.$inferInsert>)
+      .where(eq(schema.agentsTable.id, +id))
+      .execute();
+    return agent;
+  }
+
+  async updateTakeProfit(id: string, updateTakeProfitDto: UpdateTakeProfitDto) {
+    const agent = await this.db
+      .update(schema.agentsTable)
+      .set({
+        takeProfitUSD: updateTakeProfitDto.takeProfitUSD,
+      } as Partial<typeof schema.agentsTable.$inferInsert>)
+      .where(eq(schema.agentsTable.id, +id))
+      .execute();
+    return agent;
+  }
+
+  async start(id: string) {
+    const currentAgent = await this.findOne(id);
+    if (currentAgent.isRunning) {
+      throw new BadRequestException('Agent is already running');
+    }
+    if (currentAgent.endDate) {
+      if (currentAgent.endDate < new Date()) {
+        throw new BadRequestException('Agent end date is in the past');
+      }
+      await this.agentQueueProducer.addAgentEndDtJob(id, currentAgent.endDate);
+    }
+    await this.agentQueueProducer.addAgentExecuteJob(
+      id,
+      currentAgent.intervalSeconds,
+    );
+    const agent = await this.db
+      .update(schema.agentsTable)
+      .set({
+        isRunning: true,
+      } as Partial<typeof schema.agentsTable.$inferInsert>)
+      .where(eq(schema.agentsTable.id, +id))
+      .execute();
+    return agent;
+  }
+
+  async pause(id: string) {
+    const currentAgent = await this.findOne(id);
+    if (!currentAgent.isRunning) {
+      throw new BadRequestException('Agent is not running');
+    }
+    await this.agentQueueProducer.removeAgentExecuteJob(id);
+    const agent = await this.db
+      .update(schema.agentsTable)
+      .set({
+        isRunning: false,
+      } as Partial<typeof schema.agentsTable.$inferInsert>)
+      .where(eq(schema.agentsTable.id, +id))
+      .execute();
+    return agent;
+  }
+
+  async stop(id: string) {
+    // TODO: Add force sell, withdraw tokens etc
+    await this.agentQueueProducer.removeAgentExecuteJob(id);
+    await this.agentQueueProducer.removeAgentEndDtJob(id);
+    const agent = await this.db
+      .update(schema.agentsTable)
+      .set({
+        isRunning: false,
+      } as Partial<typeof schema.agentsTable.$inferInsert>)
+      .where(eq(schema.agentsTable.id, +id))
+      .execute();
+    return agent;
+  }
+
   async updateInterval(id: string, updateIntervalDto: UpdateIntervalDto) {
+    const currentAgent = await this.findOne(id);
+    if (currentAgent.isRunning) {
+      await this.agentQueueProducer.updateAgentExecuteJob(
+        id,
+        updateIntervalDto.intervalSeconds,
+      );
+    }
     const agent = await this.db
       .update(schema.agentsTable)
       .set({
         ...updateIntervalDto,
       })
-      .where(eq(schema.agentsTable.id, +id));
+      .where(eq(schema.agentsTable.id, +id))
+      .execute();
     return agent;
   }
 
   async updateEndDate(id: string, updateEndDateDto: UpdateEndDateDto) {
-    // TODO: Implement updateEndDate logic
-    return {
-      id,
-      updateEndDateDto,
-    };
-  }
-
-  async updateStopLoss(id: string, updateStopLossDto: UpdateStopLossDto) {
-    // TODO: Implement updateStopLoss logic
-    return {
-      id,
-      updateStopLossDto,
-    };
-  }
-
-  async updateTakeProfit(id: string, updateTakeProfitDto: UpdateTakeProfitDto) {
-    // TODO: Implement updateTakeProfit logic
-    return {
-      id,
-      updateTakeProfitDto,
-    };
-  }
-
-  async start(id: string) {
-    // TODO: Implement start logic
-    return {
-      id,
-    };
-  }
-
-  async pause(id: string) {
-    // TODO: Implement pause logic
-    return {
-      id,
-    };
-  }
-
-  async stop(id: string) {
-    // TODO: Implement stop logic
-    return {
-      id,
-    };
+    const currentAgent = await this.findOne(id);
+    if (currentAgent.isRunning) {
+      await this.agentQueueProducer.updateAgentEndDtJob(
+        id,
+        updateEndDateDto.endDate,
+      );
+    }
+    const agent = await this.db
+      .update(schema.agentsTable)
+      .set({
+        endDate: updateEndDateDto.endDate,
+      } as Partial<typeof schema.agentsTable.$inferInsert>)
+      .where(eq(schema.agentsTable.id, +id))
+      .execute();
+    return agent;
   }
 
   async updateTokens(id: string, updateTokensDto: UpdateTokensDto) {
