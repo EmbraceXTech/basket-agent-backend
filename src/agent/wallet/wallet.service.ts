@@ -7,19 +7,25 @@ import { DrizzleAsyncProvider } from 'src/db/drizzle.provider';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from 'src/db/schema';
 import { eq } from 'drizzle-orm';
-import { COINBASE_CHAIN_ID_HEX_MAP } from './constants/coinbase-chain.const';
+import {
+  COINBASE_CHAIN_ID_MAP,
+  // COINBASE_CHAIN_ID_HEX_MAP,
+  COINBASE_NETWORK_ID_MAP,
+} from './constants/coinbase-chain.const';
 import {
   COINBASE_ASSET_MAP,
   USDC_ASSET_MAP,
 } from './constants/coinbase-asset.const';
 import { SellDto } from './dto/sell.dto';
 import { BuyDto } from './dto/buy.dto';
+import { PriceService } from 'src/price/price.service';
 
 @Injectable()
 export class WalletService implements OnModuleInit {
   constructor(
     @Inject(DrizzleAsyncProvider)
     private readonly db: NodePgDatabase<typeof schema>,
+    private priceService: PriceService,
   ) {}
 
   onModuleInit() {
@@ -37,8 +43,22 @@ export class WalletService implements OnModuleInit {
     try {
       const wallet = await this.getCoinbaseWallet(agentId);
       const balances = await wallet.listBalances();
+      const tokenBalances = Array.from(balances).filter(
+        ([asset]) => asset !== Coinbase.assets.Usdc,
+      );
+      const prices = await this.priceService.getPrices(
+        tokenBalances.map(([asset]) => asset),
+      );
+      const priceMap = new Map(prices.map((price) => [price.token, price]));
+      const tokenValueUSD = tokenBalances.reduce((acc, [asset, balance]) => {
+        const price = priceMap.get(asset.toUpperCase());
+        return acc + Number(balance) * Number(price.price);
+      }, 0);
+      const totalValueUSD =
+        tokenValueUSD + Number(balances.get(Coinbase.assets.Usdc));
       return {
-        balances: Array.from(balances),
+        tokens: Array.from(balances),
+        balance: totalValueUSD,
       };
     } catch (e) {
       throw e;
@@ -168,10 +188,11 @@ export class WalletService implements OnModuleInit {
     }
   }
 
-  private async createCoinbaseWallet(chainIdHex: string) {
+  private async createCoinbaseWallet(chainId: string) {
+    console.log('Creating coinbase wallet for chainId: ', chainId);
     try {
       const wallet = await Wallet.create({
-        networkId: COINBASE_CHAIN_ID_HEX_MAP[chainIdHex].id,
+        networkId: COINBASE_CHAIN_ID_MAP[chainId].id,
       });
       const iv = crypto.randomBytes(16);
       const encryptedWalletData = this.encrypt(

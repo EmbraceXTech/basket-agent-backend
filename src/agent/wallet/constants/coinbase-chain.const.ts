@@ -2,25 +2,25 @@ import { Coinbase } from "@coinbase/coinbase-sdk";
 
 export type CoinbaseChainInfo = {
     id: string;
-    chainId: number;
+    chainId: string;
     chainIdHex: string;
 }
 
 export const COINBASE_CHAINS = [
     {
         id: Coinbase.networks.BaseSepolia,
-        chainId: 84532,
+        chainId: "84532",
         chainIdHex: '0x14a34',
     },
     {
         id: Coinbase.networks.BaseMainnet,
-        chainId: 8453,
+        chainId: "8453",
         chainIdHex: '0x2105',
     },
 ]
 
-export const COINBASE_CHAIN_ID_HEX_MAP = COINBASE_CHAINS.reduce((acc, chain) => {
-    acc[chain.chainIdHex] = chain;
+export const COINBASE_CHAIN_ID_MAP = COINBASE_CHAINS.reduce((acc, chain) => {
+    acc[chain.chainId] = chain;
     return acc;
 }, {} as Record<string, CoinbaseChainInfo>);
 

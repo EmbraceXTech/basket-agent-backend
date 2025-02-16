@@ -19,7 +19,7 @@ export class TelegramBotService implements OnModuleInit {
         user.id.toString(),
       );
 
-      const url = `https://basket-agent-mini-app.opsec.run/?accessToken=${accessToken}`;
+      const url = `https://basket-agent-mini-app.vercel.app/?accessToken=${accessToken}`;
 
       console.log({ url });
 
@@ -39,10 +39,8 @@ export class TelegramBotService implements OnModuleInit {
       });
     });
 
-    if (config.nodeEnv === 'production') {
-      this.bot.start().catch((err) => {
-        console.error(err);
-      });
-    }
+    this.bot.start().catch((err) => {
+      console.error(err);
+    });
   }
 }

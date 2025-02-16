@@ -1,0 +1,146 @@
+{
+  "0x09c9d464b58d96837f8d8b6f4d9fe4ad408d3a4f": {
+    "address": "0x09c9d464b58d96837f8d8b6f4d9fe4ad408d3a4f",
+    "symbol": "PLY",
+    "decimals": 18,
+    "name": "Aurigami Token",
+    "logoURI": "https://tokens.1inch.io/0x09c9d464b58d96837f8d8b6f4d9fe4ad408d3a4f.png",
+    "eip2612": false,
+    "tags": ["tokens"]
+  },
+  "0x2bae00c8bc1868a5f7a216e881bae9e662630111": {
+    "address": "0x2bae00c8bc1868a5f7a216e881bae9e662630111",
+    "symbol": "ABR",
+    "decimals": 18,
+    "name": "Allbridge",
+    "logoURI": "https://tokens.1inch.io/0x2bae00c8bc1868a5f7a216e881bae9e662630111.png",
+    "eip2612": false,
+    "tags": ["tokens"]
+  },
+  "0xc9bdeed33cd01541e1eed10f90519d2c06fe3feb": {
+    "address": "0xc9bdeed33cd01541e1eed10f90519d2c06fe3feb",
+    "symbol": "WETH",
+    "decimals": 18,
+    "name": "Wrapped ETH",
+    "logoURI": "https://tokens.1inch.io/0xc9bdeed33cd01541e1eed10f90519d2c06fe3feb.png",
+    "eip2612": false,
+    "tags": ["GROUP:WETH", "PEG:ETH", "tokens"]
+  },
+  "0xe3520349f477a5f6eb06107066048508498a291b": {
+    "address": "0xe3520349f477a5f6eb06107066048508498a291b",
+    "symbol": "DAI",
+    "decimals": 18,
+    "name": "Dai Stablecoin",
+    "logoURI": "https://tokens.1inch.io/0xe3520349f477a5f6eb06107066048508498a291b.png",
+    "eip2612": false,
+    "tags": ["GROUP:DAI", "PEG:USD", "tokens"]
+  },
+  "0x8bec47865ade3b172a928df8f990bc7f2a3b9f79": {
+    "address": "0x8bec47865ade3b172a928df8f990bc7f2a3b9f79",
+    "symbol": "AURORA",
+    "decimals": 18,
+    "name": "Aurora",
+    "logoURI": "https://tokens.1inch.io/0x8bec47865ade3b172a928df8f990bc7f2a3b9f79.png",
+    "eip2612": false,
+    "tags": ["tokens"]
+  },
+  "0x5ce9f0b6afb36135b5ddbf11705ceb65e634a9dc": {
+    "address": "0x5ce9f0b6afb36135b5ddbf11705ceb65e634a9dc",
+    "symbol": "atUST",
+    "decimals": 18,
+    "name": "UST Terra",
+    "logoURI": "https://tokens.1inch.io/0x5ce9f0b6afb36135b5ddbf11705ceb65e634a9dc.png",
+    "eip2612": false,
+    "tags": ["tokens"]
+  },
+  "0xfa94348467f64d5a457f75f8bc40495d33c65abb": {
+    "address": "0xfa94348467f64d5a457f75f8bc40495d33c65abb",
+    "symbol": "TRI",
+    "decimals": 18,
+    "name": "Trisolaris",
+    "logoURI": "https://tokens.1inch.io/0xfa94348467f64d5a457f75f8bc40495d33c65abb.png",
+    "eip2612": true,
+    "tags": ["tokens"]
+  },
+  "0xb12bfca5a55806aaf64e99521918a4bf0fc40802": {
+    "address": "0xb12bfca5a55806aaf64e99521918a4bf0fc40802",
+    "symbol": "USDC.e",
+    "decimals": 6,
+    "name": "USD Coin",
+    "logoURI": "https://tokens.1inch.io/0xb12bfca5a55806aaf64e99521918a4bf0fc40802.png",
+    "eip2612": false,
+    "tags": ["GROUP:USDC.e", "PEG:USD", "tokens"]
+  },
+  "0xf4eb217ba2454613b15dbdea6e5f22276410e89e": {
+    "address": "0xf4eb217ba2454613b15dbdea6e5f22276410e89e",
+    "symbol": "WBTC",
+    "decimals": 8,
+    "name": "Wrapped BTC",
+    "logoURI": "https://tokens.1inch.io/0xf4eb217ba2454613b15dbdea6e5f22276410e89e.png",
+    "eip2612": false,
+    "tags": ["GROUP:WBTC", "PEG:BTC", "tokens"]
+  },
+  "0xc42c30ac6cc15fac9bd938618bcaa1a1fae8501d": {
+    "address": "0xc42c30ac6cc15fac9bd938618bcaa1a1fae8501d",
+    "symbol": "NEAR",
+    "decimals": 24,
+    "name": "NEAR",
+    "logoURI": "https://tokens.1inch.io/0xc42c30ac6cc15fac9bd938618bcaa1a1fae8501d.png",
+    "eip2612": false,
+    "tags": ["tokens"]
+  },
+  "0x7faa64faf54750a2e3ee621166635feaf406ab22": {
+    "address": "0x7faa64faf54750a2e3ee621166635feaf406ab22",
+    "symbol": "WANNA",
+    "decimals": 18,
+    "name": "WannaSwap",
+    "logoURI": "https://tokens.1inch.io/0x7faa64faf54750a2e3ee621166635feaf406ab22.png",
+    "eip2612": false,
+    "tags": ["tokens"]
+  },
+  "0x4988a896b1227218e4a686fde5eabdcabd91571f": {
+    "address": "0x4988a896b1227218e4a686fde5eabdcabd91571f",
+    "symbol": "USDT.e",
+    "decimals": 6,
+    "name": "Tether USD",
+    "logoURI": "https://tokens.1inch.io/0x4988a896b1227218e4a686fde5eabdcabd91571f.png",
+    "eip2612": false,
+    "tags": ["GROUP:USDT.e", "PEG:USD", "tokens"]
+  },
+  "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee": {
+    "address": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "symbol": "ETH",
+    "decimals": 18,
+    "name": "Ether",
+    "logoURI": "https://tokens.1inch.io/0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee.png",
+    "eip2612": false,
+    "tags": ["GROUP:ETH", "native", "PEG:ETH"]
+  },
+  "0xda2585430fef327ad8ee44af8f1f989a2a91a3d2": {
+    "address": "0xda2585430fef327ad8ee44af8f1f989a2a91a3d2",
+    "symbol": "FRAX",
+    "decimals": 18,
+    "name": "Frax",
+    "logoURI": "https://tokens.1inch.io/0xda2585430fef327ad8ee44af8f1f989a2a91a3d2.png",
+    "eip2612": false,
+    "tags": ["GROUP:FRAX", "tokens"]
+  },
+  "0x885f8cf6e45bdd3fdcdc644efdcd0ac93880c781": {
+    "address": "0x885f8cf6e45bdd3fdcdc644efdcd0ac93880c781",
+    "symbol": "PAD",
+    "decimals": 18,
+    "name": "NearPad Token",
+    "logoURI": "https://tokens.1inch.io/0x885f8cf6e45bdd3fdcdc644efdcd0ac93880c781.png",
+    "eip2612": false,
+    "tags": ["tokens"]
+  },
+  "0xea62791aa682d455614eaa2a12ba3d9a2fd197af": {
+    "address": "0xea62791aa682d455614eaa2a12ba3d9a2fd197af",
+    "symbol": "FLX",
+    "decimals": 18,
+    "name": "Flux Token",
+    "logoURI": "https://tokens.1inch.io/0xea62791aa682d455614eaa2a12ba3d9a2fd197af.png",
+    "eip2612": false,
+    "tags": ["tokens"]
+  }
+}

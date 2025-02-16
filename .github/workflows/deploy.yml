@@ -23,6 +23,7 @@ jobs:
           CDP_API_KEY_PRIVATE_KEY=${{secrets.CDP_API_KEY_PRIVATE_KEY}}
           CDP_SK_ENCRYPTION_KEY=${{secrets.CDP_SK_ENCRYPTION_KEY}}
           OPENAI_API_KEY=${{secrets.OPENAI_API_KEY}}
+          ONEINCH_API_KEY=${{secrets.ONEINCH_API_KEY}}
           EOF
 
       - name: Run Docker Compose
