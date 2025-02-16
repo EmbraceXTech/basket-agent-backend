@@ -2,19 +2,19 @@ import { Coinbase } from "@coinbase/coinbase-sdk";
 
 export type CoinbaseChainInfo = {
     id: string;
-    chainId: number;
+    chainId: string;
     chainIdHex: string;
 }
 
 export const COINBASE_CHAINS = [
     {
         id: Coinbase.networks.BaseSepolia,
-        chainId: 84532,
+        chainId: "84532",
         chainIdHex: '0x14a34',
     },
     {
         id: Coinbase.networks.BaseMainnet,
-        chainId: 8453,
+        chainId: "8453",
         chainIdHex: '0x2105',
     },
 ]
