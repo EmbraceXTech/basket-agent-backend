@@ -19,8 +19,8 @@ export const COINBASE_CHAINS = [
     },
 ]
 
-export const COINBASE_CHAIN_ID_HEX_MAP = COINBASE_CHAINS.reduce((acc, chain) => {
-    acc[chain.chainIdHex] = chain;
+export const COINBASE_CHAIN_ID_MAP = COINBASE_CHAINS.reduce((acc, chain) => {
+    acc[chain.chainId] = chain;
     return acc;
 }, {} as Record<string, CoinbaseChainInfo>);
 

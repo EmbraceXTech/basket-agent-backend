@@ -62,7 +62,7 @@ export class AgentService {
           .returning();
 
         const agentWallet = await this.walletService.createAgentWallet(
-          chainInfo.chainIdHex,
+          chainInfo.chainId,
         );
 
         await tx.insert(schema.walletKeysTable).values({

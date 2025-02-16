@@ -8,6 +8,7 @@ import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from 'src/db/schema';
 import { eq } from 'drizzle-orm';
 import {
+  COINBASE_CHAIN_ID_MAP,
   // COINBASE_CHAIN_ID_HEX_MAP,
   COINBASE_NETWORK_ID_MAP,
 } from './constants/coinbase-chain.const';
@@ -188,9 +189,10 @@ export class WalletService implements OnModuleInit {
   }
 
   private async createCoinbaseWallet(chainId: string) {
+    console.log('Creating coinbase wallet for chainId: ', chainId);
     try {
       const wallet = await Wallet.create({
-        networkId: COINBASE_NETWORK_ID_MAP[chainId].id,
+        networkId: COINBASE_CHAIN_ID_MAP[chainId].id,
       });
       const iv = crypto.randomBytes(16);
       const encryptedWalletData = this.encrypt(
