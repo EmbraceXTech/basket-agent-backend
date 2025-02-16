@@ -24,6 +24,15 @@ jobs:
           CDP_SK_ENCRYPTION_KEY=${{secrets.CDP_SK_ENCRYPTION_KEY}}
           OPENAI_API_KEY=${{secrets.OPENAI_API_KEY}}
           ONEINCH_API_KEY=${{secrets.ONEINCH_API_KEY}}
+          BINANCE_API_ENDPOINT=${{secrets.BINANCE_API_ENDPOINT}}
+          ONEINCH_API_ENDPOINT=${{secrets.ONEINCH_API_ENDPOINT}}
+          CHAIN_ICON_TEMPLATE_URL=${{secrets.CHAIN_ICON_TEMPLATE_URL}}
+          AVAILABLE_CHAIN_IDS=${{secrets.AVAILABLE_CHAIN_IDS}}
+          AVAILABLE_TOKENS=${{secrets.AVAILABLE_TOKENS}}
+          DEFAULT_CHAIN_ID=${{secrets.DEFAULT_CHAIN_ID}}
+          REDIS_HOST=${{secrets.REDIS_HOST}}
+          REDIS_PORT=${{secrets.REDIS_PORT}}
+          REDIS_PASSWORD=${{secrets.REDIS_PASSWORD}}
           EOF
 
       - name: Run Docker Compose
