@@ -8,7 +8,7 @@ export class PriceController {
   @Get('/:tokens')
   async getPrices(@Param('tokens') tokens: string) {
     try {
-      return await this.priceService.getPrices(tokens.split(','));
+      return await this.priceService.getPrices([...tokens.split(',')]);
     } catch (e) {
       throw new NotFoundException(`Tokens ${tokens} price not found`);
     }

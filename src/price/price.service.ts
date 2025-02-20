@@ -23,7 +23,7 @@ export class PriceService {
       );
     }
 
-    let priceResults: (PriceResponse | null)[] = [];
+    const priceResults: (PriceResponse | null)[] = [];
     try {
       const nullResultIndices: number[] = [];
       upperCaseTokens.forEach((_, index) => {
