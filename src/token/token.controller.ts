@@ -12,11 +12,28 @@ export class TokenController {
   constructor(private readonly tokenService: TokenService) {}
 
   @Get('available-tokens')
-  async getAvailableTokens(@Query('chainId') chainId: number) {
+  async getAvailableTokens(
+    @Query('chainId') chainId: number,
+    @Query('includeTokenBase') includeTokenBase?: string,
+  ) {
     try {
-      return await this.tokenService.getAvailableTokens(chainId);
+      const _includeTokenBase = includeTokenBase === 'true';
+
+      return await this.tokenService.getAvailableTokens(
+        chainId,
+        _includeTokenBase,
+      );
     } catch (e) {
       console.log(e);
+      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  @Get('based-token')
+  async getBasedToken(@Query('chainId') chainId: number) {
+    try {
+      return await this.tokenService.getBasedToken(chainId);
+    } catch (e) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }
   }

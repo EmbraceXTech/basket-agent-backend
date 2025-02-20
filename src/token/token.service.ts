@@ -24,7 +24,10 @@ export class TokenService {
     }
   }
 
-  async getAvailableTokens(chainId: number | string): Promise<TokenInfo[]> {
+  async getAvailableTokens(
+    chainId: number | string,
+    includeTokenBase?: boolean,
+  ): Promise<TokenInfo[]> {
     const isChainAvailable = config.availableChainIds.includes(
       chainId.toString(),
     );
@@ -33,8 +36,22 @@ export class TokenService {
     }
 
     const tokenList = await this.readTokenList(chainId);
-    return Object.values(tokenList).filter((token) =>
+    const tokens = Object.values(tokenList).filter((token) =>
       config.availableTokens.includes(token.symbol),
+    );
+
+    if (includeTokenBase) {
+      const basedToken = await this.getBasedToken(chainId);
+      tokens.push(basedToken);
+    }
+
+    return tokens;
+  }
+
+  async getBasedToken(chainId: number | string): Promise<TokenInfo> {
+    const tokenList = await this.readTokenList(chainId);
+    return Object.values(tokenList).find(
+      (token) => token.symbol.toUpperCase() === 'USDC',
     );
   }
 }
