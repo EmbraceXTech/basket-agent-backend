@@ -54,7 +54,7 @@ export class AgentController {
   }
 
   @UseGuards(AgentGuard)
-  @Get(':id/logs')
+  @Get(':agentId/logs')
   getLogs(@ValidateAgentOwner() agentId: string) {
     return this.agentService.getLogs(agentId);
   }

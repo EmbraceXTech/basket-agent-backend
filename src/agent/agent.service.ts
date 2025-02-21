@@ -11,7 +11,7 @@ import { DrizzleAsyncProvider } from 'src/db/drizzle.provider';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from 'src/db/schema';
 import { WithdrawTokenDto } from './wallet/dto/withdraw-token.dto';
-import { and, eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import { WalletService } from './wallet/wallet.service';
 import {
   // COINBASE_CHAIN_ID_HEX_MAP,
@@ -113,6 +113,7 @@ export class AgentService {
     try {
       const logs = await this.db.query.logsTable.findMany({
         where: eq(schema.logsTable.agentId, +id),
+        orderBy: desc(schema.logsTable.createdAt),
       });
       return logs;
     } catch (error) {
