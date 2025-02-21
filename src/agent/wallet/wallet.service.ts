@@ -82,6 +82,7 @@ export class WalletService implements OnModuleInit {
   async withdraw(agentId: string, withdrawTokenDto: WithdrawTokenDto) {
     return this.transferFromAgent(
       agentId,
+      withdrawTokenDto.assetId,
       withdrawTokenDto.recipientAddress,
       withdrawTokenDto.amount,
     );
@@ -89,6 +90,7 @@ export class WalletService implements OnModuleInit {
 
   async transferFromAgent(
     agentId: string,
+    assetId: string,
     recipientAddress: string,
     amount: number,
   ) {
@@ -100,7 +102,7 @@ export class WalletService implements OnModuleInit {
 
       const transfer = await agentWallet.createTransfer({
         amount,
-        assetId: Coinbase.assets.Usdc,
+        assetId: assetId,
         destination: recipientAddress,
       });
 
