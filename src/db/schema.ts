@@ -49,7 +49,7 @@ export const logsTable = pgTable('logs', {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
   agentId: integer()
     .notNull()
-    .references(() => agentsTable.id),
+    .references(() => agentsTable.id, { onDelete: 'cascade' }),
   thought: text().notNull(),
   action: varchar({ length: 255 }).notNull(),
   amount: integer().notNull(),
@@ -68,7 +68,7 @@ export const knowledgesTable = pgTable('knowledges', {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
   agentId: integer()
     .notNull()
-    .references(() => agentsTable.id),
+    .references(() => agentsTable.id, { onDelete: 'cascade' }),
   name: varchar({ length: 255 }).notNull(),
   content: text().notNull(),
   createdAt: timestamp().notNull().defaultNow(),
@@ -84,7 +84,7 @@ export const knowledgesRelations = relations(knowledgesTable, ({ one }) => ({
 export const walletKeysTable = pgTable('wallet_keys', {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
   agentId: integer()
-    .references(() => agentsTable.id)
+    .references(() => agentsTable.id, { onDelete: 'cascade' })
     .notNull()
     .unique(),
   address: varchar({ length: 255 }).notNull().unique(),

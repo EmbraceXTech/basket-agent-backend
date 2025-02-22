@@ -19,6 +19,7 @@ import {
   DEFAULT_CHAIN_ID,
 } from './wallet/constants/coinbase-chain.const';
 import { AgentQueueProducer } from './agent-queue/agent-queue.producer';
+import { UpdateBulkDto } from './dto/update-bulk.dto';
 
 @Injectable()
 export class AgentService {
@@ -217,12 +218,12 @@ export class AgentService {
         if (currentAgent.endDate < new Date()) {
           throw new BadRequestException('Agent end date is in the past');
         }
-        await this.agentQueueProducer.addAgentEndDtJob(
+        await this.agentQueueProducer.updateAgentEndDtJob(
           id,
           currentAgent.endDate,
         );
       }
-      await this.agentQueueProducer.addAgentExecuteJob(
+      await this.agentQueueProducer.updateAgentExecuteJob(
         id,
         currentAgent.intervalSeconds,
       );
@@ -349,6 +350,43 @@ export class AgentService {
       throw new BadRequestException(
         `Failed to withdraw tokens: ${error.message}`,
       );
+    }
+  }
+
+  async delete(id: string) {
+    try {
+      const totalValueUSD = await this.walletService.getBalance(id);
+      if (totalValueUSD.balance >= 1) {
+        throw new BadRequestException('Agent balance is greater than 1 USD');
+      }
+      await this.agentQueueProducer.removeAgentEndDtJob(id);
+      await this.agentQueueProducer.removeAgentExecuteJob(id);
+      await this.db
+        .delete(schema.agentsTable)
+        .where(eq(schema.agentsTable.id, +id));
+      return {
+        message: 'Agent deleted successfully',
+      };
+    } catch (error) {
+      throw new BadRequestException(`Failed to delete agent: ${error.message}`);
+    }
+  }
+
+  async updateBulk(id: string, updateBulkDto: UpdateBulkDto) {
+    try {
+      await this.updateStrategy(id, { strategy: updateBulkDto.strategy });
+      await this.updateStopLoss(id, { stopLossUSD: updateBulkDto.stopLossUSD });
+      await this.updateTakeProfit(id, {
+        takeProfitUSD: updateBulkDto.takeProfitUSD,
+      });
+      await this.updateInterval(id, {
+        intervalSeconds: updateBulkDto.intervalSeconds,
+      });
+      await this.updateEndDate(id, {
+        endDate: updateBulkDto.endDate,
+      });
+    } catch (error) {
+      throw new BadRequestException(`Failed to update bulk: ${error.message}`);
     }
   }
 }
