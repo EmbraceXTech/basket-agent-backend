@@ -26,6 +26,7 @@ import { WalletService } from './wallet/wallet.service';
 import { FaucetDto } from './wallet/dto/faucet.dto';
 import { BuyDto } from './wallet/dto/buy.dto';
 import { SellDto } from './wallet/dto/sell.dto';
+import { TradePlanDto } from './dto/trade.dto';
 
 @Controller('agent')
 export class AgentController {
@@ -161,7 +162,7 @@ export class AgentController {
     @ValidateAgentOwner() agentId: string,
     @Body() withdrawTokenDto: WithdrawTokenDto,
   ) {
-    return this.walletService.withdraw(agentId, withdrawTokenDto);
+    return this.agentService.withdraw(agentId, withdrawTokenDto);
   }
 
   @UseGuards(AgentGuard)
@@ -174,6 +175,18 @@ export class AgentController {
   @Post(':agentId/wallet/sell-asset')
   sellAsset(@ValidateAgentOwner() agentId: string, @Body() sellDto: SellDto) {
     return this.walletService.sellAsset(agentId, sellDto);
+  }
+
+  @UseGuards(AgentGuard)
+  @Post(':agentId/trading-plan')
+  createTradingPlan(@ValidateAgentOwner() agentId: string) {
+    return this.agentService.createTradingPlan(agentId);
+  }
+
+  @UseGuards(AgentGuard)
+  @Post(':agentId/execute-trading-plan')
+  executeTradingPlan(@ValidateAgentOwner() agentId: string, @Body() plan: TradePlanDto) {
+    return this.agentService.executeTradingPlan(agentId, plan);
   }
 
   @UseGuards(AgentGuard)

@@ -50,6 +50,13 @@ export class WalletService implements OnModuleInit {
         tokenBalances.map(([asset]) => asset),
       );
       const priceMap = new Map(prices.map((price) => [price.token, price]));
+      const tokenValues = Array.from(balances).map(([asset, balance]) => {
+        const price = priceMap.get(asset.toUpperCase());
+        return [
+          asset,
+          asset === Coinbase.assets.Usdc ? Number(balance) : Number(balance) * Number(price.price),
+        ]
+      });
       const tokenValueUSD = tokenBalances.reduce((acc, [asset, balance]) => {
         const price = priceMap.get(asset.toUpperCase());
         return acc + Number(balance) * Number(price.price);
@@ -57,7 +64,8 @@ export class WalletService implements OnModuleInit {
       const totalValueUSD =
         tokenValueUSD + Number(balances.get(Coinbase.assets.Usdc));
       return {
-        tokens: Array.from(balances),
+        tokens: Array.from(balances).map(([asset, balance]) => ([asset, Number(balance)])),
+        tokenValues,
         balance: totalValueUSD,
       };
     } catch (e) {
@@ -153,10 +161,10 @@ export class WalletService implements OnModuleInit {
     const agent = await this.findAgentById(agentId);
     const agentWallet = await this.getCoinbaseWallet(agentId);
     const assets = COINBASE_ASSET_MAP[agent.chainId];
-    const inputAsset = assets[inputTokenAddress];
-    const outputAsset = assets[outputTokenAddress];
+    const inputAsset = assets[inputTokenAddress.toLowerCase()];
+    const outputAsset = assets[outputTokenAddress.toLowerCase()];
     const trade = await agentWallet.createTrade({
-      amount,
+      amount: Number(amount.toFixed(inputAsset.decimals)),
       fromAssetId: inputAsset.coinbaseAssetId,
       toAssetId: outputAsset.coinbaseAssetId,
     });
