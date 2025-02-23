@@ -25,6 +25,7 @@ import { PriceService } from 'src/price/price.service';
 import { TradePlanDto } from './dto/trade.dto';
 import { BuyDto } from './wallet/dto/buy.dto';
 import { SellDto } from './wallet/dto/sell.dto';
+import { UpdateBulkDto } from './dto/update-bulk.dto';
 
 @Injectable()
 export class AgentService {
@@ -224,12 +225,12 @@ export class AgentService {
         if (currentAgent.endDate < new Date()) {
           throw new BadRequestException('Agent end date is in the past');
         }
-        await this.agentQueueProducer.addAgentEndDtJob(
+        await this.agentQueueProducer.updateAgentEndDtJob(
           id,
           currentAgent.endDate,
         );
       }
-      await this.agentQueueProducer.addAgentExecuteJob(
+      await this.agentQueueProducer.updateAgentExecuteJob(
         id,
         currentAgent.intervalSeconds,
       );
@@ -361,7 +362,12 @@ export class AgentService {
       if (!agent) return null;
       const { strategy, selectedTokens, knowledge, walletKey, chainId } = agent;
       const currentHoldings = await this.walletService.getBalance(id);
-      const balanceMap = new Map(currentHoldings.tokens.map(([token, balance]) => [token as string, balance as number]));
+      const balanceMap = new Map(
+        currentHoldings.tokens.map(([token, balance]) => [
+          token as string,
+          balance as number,
+        ]),
+      );
 
       // TODO: Move to chain config
       const minGas = 0.001;
@@ -369,7 +375,8 @@ export class AgentService {
       let spentUSD = 0;
       const tradeSteps: TradeStep[] = [];
       for (const token of selectedTokens) {
-        const remainingStablecoin = balanceMap.get(Coinbase.assets.Usdc) || 0 - spentUSD;
+        const remainingStablecoin =
+          balanceMap.get(Coinbase.assets.Usdc) || 0 - spentUSD;
         const { tokenSymbol, tokenAddress } = JSON.parse(token);
         const remainingToken = balanceMap.get(tokenSymbol) || 0;
 
@@ -388,14 +395,14 @@ export class AgentService {
                 tokenAddress,
                 usdAmount: amount,
               },
-              reason: 'Buy random amount of token'
-            })
+              reason: 'Buy random amount of token',
+            });
           } else {
             tradeSteps.push({
               type: 'hold',
               data: null,
-              reason: 'No amount to buy'
-            })
+              reason: 'No amount to buy',
+            });
           }
         } else if (randValue === 1) {
           const action = 'sell';
@@ -409,21 +416,21 @@ export class AgentService {
                 tokenAddress,
                 tokenAmount: amount,
               },
-              reason: 'Sell random amount of token'
-            })
+              reason: 'Sell random amount of token',
+            });
           } else {
             tradeSteps.push({
               type: 'hold',
               data: null,
-              reason: 'No amount to sell'
-            })
+              reason: 'No amount to sell',
+            });
           }
         } else {
           tradeSteps.push({
             type: 'hold',
             data: null,
-            reason: 'No action'
-          })
+            reason: 'No action',
+          });
         }
       }
 
@@ -450,10 +457,49 @@ export class AgentService {
           result.push(trade);
         }
       }
-      console.log("Result: ", result);
+      console.log('Result: ', result);
       return result;
     } catch (error) {
-      throw new BadRequestException(`Failed to execute trading plan: ${error.message}`);
+      throw new BadRequestException(
+        `Failed to execute trading plan: ${error.message}`,
+      );
+    }
+  }
+
+  async delete(id: string) {
+    try {
+      const totalValueUSD = await this.walletService.getBalance(id);
+      if (totalValueUSD.balance >= 1) {
+        throw new BadRequestException('Agent balance is greater than 1 USD');
+      }
+      await this.agentQueueProducer.removeAgentEndDtJob(id);
+      await this.agentQueueProducer.removeAgentExecuteJob(id);
+      await this.db
+        .delete(schema.agentsTable)
+        .where(eq(schema.agentsTable.id, +id));
+      return {
+        message: 'Agent deleted successfully',
+      };
+    } catch (error) {
+      throw new BadRequestException(`Failed to delete agent: ${error.message}`);
+    }
+  }
+
+  async updateBulk(id: string, updateBulkDto: UpdateBulkDto) {
+    try {
+      await this.updateStrategy(id, { strategy: updateBulkDto.strategy });
+      await this.updateStopLoss(id, { stopLossUSD: updateBulkDto.stopLossUSD });
+      await this.updateTakeProfit(id, {
+        takeProfitUSD: updateBulkDto.takeProfitUSD,
+      });
+      await this.updateInterval(id, {
+        intervalSeconds: updateBulkDto.intervalSeconds,
+      });
+      await this.updateEndDate(id, {
+        endDate: updateBulkDto.endDate,
+      });
+    } catch (error) {
+      throw new BadRequestException(`Failed to update bulk: ${error.message}`);
     }
   }
 }
