@@ -1,6 +1,8 @@
 import {
   boolean,
   integer,
+  numeric,
+  doublePrecision,
   pgTable,
   text,
   timestamp,
@@ -96,6 +98,30 @@ export const walletKeysTable = pgTable('wallet_keys', {
 export const walletKeysRelations = relations(walletKeysTable, ({ one }) => ({
   agent: one(agentsTable, {
     fields: [walletKeysTable.agentId],
+    references: [agentsTable.id],
+  }),
+}));
+
+export const balanceSnapshotsTable = pgTable('balance_snapshots', {
+  id: integer().primaryKey().generatedAlwaysAsIdentity(),
+  agentId: integer()
+    .notNull()
+    .references(() => agentsTable.id, { onDelete: 'cascade' }),
+  date: timestamp().notNull(),
+  injection: doublePrecision().notNull(),
+  equity: doublePrecision().notNull(),
+  balance: doublePrecision().notNull(),
+  startPeriodValue: doublePrecision(),
+  growthRate: doublePrecision(),
+  cumulativeMultiplier: doublePrecision(),
+  performance: doublePrecision(),
+  transactionHash: varchar({ length: 255 }),
+  createdAt: timestamp().notNull().defaultNow(),
+});
+
+export const balanceSnapshotsRelations = relations(balanceSnapshotsTable, ({ one }) => ({
+  agent: one(agentsTable, {
+    fields: [balanceSnapshotsTable.agentId],
     references: [agentsTable.id],
   }),
 }));

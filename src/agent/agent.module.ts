@@ -14,13 +14,11 @@ import { AgentExecuteConsumer } from './agent-queue/agent-execute.consumer';
 import { AgentEndDtConsumer } from './agent-queue/agent-end-dt.consumer';
 import { AgentSLTPConsumer } from './agent-queue/agent-sl-tp.consumer';
 import { config } from 'src/config';
-import { TradeModule } from './trade/trade.module';
 
 @Module({
   imports: [
     WalletModule,
     PriceModule,
-    TradeModule,
     BullModule.registerQueue({
       name: AGENT_EXECUTE_QUEUE,
     }),
@@ -29,7 +27,7 @@ import { TradeModule } from './trade/trade.module';
     }),
     BullModule.registerQueue({
       name: AGENT_SL_TP_QUEUE,
-    })  
+    }),
   ],
   controllers: [AgentController],
   providers: [
