@@ -57,4 +57,10 @@ export class WalletController {
     return this.walletService.faucet(agentId, faucetDto.token);
   }
 
+//   @UseGuards(AgentGuard)
+//   @Post('balance-snapshot')
+//   createBalanceSnapshot(@ValidateAgentOwner() agentId: string) {
+//     return this.walletService.createBalanceSnapshot(agentId);
+//   }
+
 }

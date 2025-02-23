@@ -181,7 +181,7 @@ export class CdpConnector {
     }
   }
 
-  private async getCoinbaseWallet(agentId: string) {
+  public async getCoinbaseWallet(agentId: string) {
     try {
       const agentWalletInfo = await this.findByAgentId(agentId);
       const { ivString, encryptedWalletData } = agentWalletInfo;
