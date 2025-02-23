@@ -1,34 +1,27 @@
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from 'src/db/schema';
 import { and, asc, desc, eq } from 'drizzle-orm';
-import { BalanceSnapshotInput } from './interfaces/balance-snapshot.interface';
+import { BalanceSnapshotInput, ChartPoint, LineData } from './interfaces/balance-snapshot.interface';
+import { DateTime } from 'luxon';
+import * as R from 'ramda';
 
 export class PortfolioManager {
   constructor(private readonly db: NodePgDatabase<typeof schema>) {}
 
   async createBalanceSnapshot(
     agentId: string,
-    balance: number,
-    injection: number = 0,
-    date: Date = new Date(),
+    data: BalanceSnapshotInput,
     recalculate: boolean = false,
-    transactionHash: string = null,
   ) {
     try {
       const lastSnapshot = await this.getLastSnapshot(agentId);
-      const snapshotInput: BalanceSnapshotInput = {
-        date,
-        injection,
-        balance,
-      };
-      const snapshot = this.calculateSnapshot(snapshotInput, lastSnapshot);
+      const snapshot = this.calculateSnapshot(data, lastSnapshot);
       const result = await this.db
         .insert(schema.balanceSnapshotsTable)
         .values({
           agentId: +agentId,
           ...snapshot,
-          transactionHash: transactionHash
-        } as any) // TODO: Fix type error
+        } as typeof schema.balanceSnapshotsTable.$inferSelect)
         .returning();
 
       if (recalculate) {
@@ -96,6 +89,7 @@ export class PortfolioManager {
       growthRate,
       cumulativeMultiplier,
       performance,
+      transactionHash: input.transactionHash,
     } as Omit<
       typeof schema.balanceSnapshotsTable.$inferSelect,
       'agentId' | 'createdAt' | 'id'
@@ -124,6 +118,99 @@ export class PortfolioManager {
     return await Promise.all(promises);
   }
 
+  async getBalanceSnapshotTimeSeries(agentId: string) {
+    const snapshots = await this.getSnapshots(agentId);
+
+    if (snapshots.length === 0) return [];
+
+    const data = [{
+      title: 'balance',
+      times: snapshots.map(s => s.date),
+      values: snapshots.map(s => s.balance)
+    }];
+
+    return this.createChartData(data);
+  }
+
+  private generateTimeSeries(
+    start: number = 0,
+    end: number = 0, 
+    stepMinutes: number,
+  ): DateTime[] {
+    let times: DateTime[] = [];
+    let currentTime = DateTime.fromMillis(start);
+
+    while (currentTime.valueOf() <= end) {
+      times.push(currentTime);
+      currentTime = currentTime.plus({ minutes: stepMinutes });
+    }
+
+    times.push(currentTime);
+
+    return times;
+  }
+
+  private createChartData = <T>(data: (T & LineData)[]): ChartPoint[] => {
+    if (data.length === 0) return [];
+
+    const allTimes = R.flatten(
+      data.map((d) => d.times.map((time) => time.valueOf())),
+    );
+    const minTime = R.reduce(R.min, allTimes[0], allTimes);
+    const maxTime = R.reduce(R.max, allTimes[0], allTimes);
+
+    const stepMinutes = 15;
+    const timeSeries = this.generateTimeSeries(
+      minTime as number,
+      maxTime as number,
+      stepMinutes,
+    );
+
+    const dataIndices = data.map(() => 0);
+
+    const chartData: ChartPoint[] = timeSeries.reduce(
+      (prev, timePoint, timeIndex) => {
+        const entry: ChartPoint = {
+          date: timePoint.toFormat('dd/LL/yyyy'),
+        };
+
+        const binLeft = timePoint;
+        const binRight = timePoint.plus({ minutes: stepMinutes });
+
+        dataIndices.forEach((startIndex, dataIndex) => {
+          const dataItem = data[dataIndex];
+          const valuesInBin: number[] = [];
+
+          let i = startIndex;
+          for (; i < dataItem.times.length; i++) {
+            const itemTime = DateTime.fromISO(dataItem.times[i].toISOString());
+
+            if (itemTime >= binLeft && itemTime < binRight) {
+              valuesInBin.push(dataItem.values[i]);
+            } else if (itemTime >= binRight) {
+              break;
+            }
+          }
+
+          dataIndices[dataIndex] = i;
+
+          if (valuesInBin.length > 0) {
+            entry[dataItem.title] = R.mean(valuesInBin);
+          } else {
+            const prevDataPoint =
+              timeIndex === 0 ? 0 : prev[timeIndex - 1][dataItem.title];
+            entry[dataItem.title] = prevDataPoint;
+          }
+        });
+
+        return [...prev, entry];
+      },
+      [] as ChartPoint[],
+    );
+
+    return chartData;
+  };
+
   async getFirstSnapshot(agentId: string) {
     return this.db.query.balanceSnapshotsTable.findFirst({
       where: eq(schema.balanceSnapshotsTable.agentId, +agentId),
@@ -144,5 +231,6 @@ export class PortfolioManager {
       orderBy: asc(schema.balanceSnapshotsTable.date),
     });
   }
+
 
 }

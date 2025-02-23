@@ -1,4 +1,9 @@
-import { BadRequestException, Inject, Injectable, OnModuleInit } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  OnModuleInit,
+} from '@nestjs/common';
 import { WithdrawTokenDto } from './dto/withdraw-token.dto';
 import { DrizzleAsyncProvider } from 'src/db/drizzle.provider';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
@@ -14,10 +19,10 @@ import { EthConnector } from './eth-connector';
 import { config } from 'src/config';
 import { NATIVE_TOKEN_ADDRESS } from 'src/constant/eth.constant';
 import { TokenService } from 'src/token/token.service';
+import { BalanceSnapshotInput } from './interfaces/balance-snapshot.interface';
 
 @Injectable()
 export class WalletService implements OnModuleInit {
-
   private cdpConnector: CdpConnector;
   private portfolioManager: PortfolioManager;
   private ethConnector: EthConnector;
@@ -40,7 +45,19 @@ export class WalletService implements OnModuleInit {
   }
 
   async getBalance(agentId: string) {
-    return this.cdpConnector.getBalance(agentId);
+    const walletBalance = await this.cdpConnector.getBalance(agentId);
+    const balanceSnapshot = await this.portfolioManager.getLastSnapshot(
+      agentId,
+    );
+    return {
+      ...walletBalance,
+      equity: balanceSnapshot ? balanceSnapshot.equity : 0,
+      performance: balanceSnapshot ? balanceSnapshot.performance : 0,
+    };
+  }
+
+  async getBalanceChart(agentId: string) {
+    return this.portfolioManager.getBalanceSnapshotTimeSeries(agentId);
   }
 
   async findByAgentId(agentId: string) {
@@ -61,44 +78,126 @@ export class WalletService implements OnModuleInit {
     try {
       const agent = await this.findAgentById(agentId);
       const walletInfo = await this.cdpConnector.getCoinbaseWallet(agentId);
-      const history = await this.ethConnector.getTransferHistory(config.baseRpcUrl, recordDepositDto.transactionHash);
+      const balanceInfo = await this.getBalance(agentId);
+      const history = await this.ethConnector.getTransferHistory(
+        config.baseRpcUrl,
+        recordDepositDto.transactionHash,
+      );
 
-      const walletAddress = await walletInfo.getDefaultAddress().then(res => res.getId());
+      const walletAddress = await walletInfo
+        .getDefaultAddress()
+        .then((res) => res.getId());
       if (history.toAddress.toLowerCase() !== walletAddress.toLowerCase()) {
-        throw new BadRequestException(`Deposit destination address does not match agent wallet`);
+        throw new BadRequestException(
+          `Deposit destination address does not match agent wallet`,
+        );
       }
 
-      const isNative = history.tokenAddress.toLowerCase() === NATIVE_TOKEN_ADDRESS;
+      const isNative =
+        history.tokenAddress.toLowerCase() === NATIVE_TOKEN_ADDRESS;
       const amount = isNative ? history.value : history.amount;
 
-      const existingDeposit = await this.portfolioManager.findExistingDeposit(agentId, recordDepositDto.transactionHash);
+      const existingDeposit = await this.portfolioManager.findExistingDeposit(
+        agentId,
+        recordDepositDto.transactionHash,
+      );
       if (existingDeposit) {
         throw new BadRequestException(`Deposit already exists`);
       }
 
-      const tokenMap = await this.tokenService.getAvailableTokenMap(agent.chainId);
+      const tokenMap = await this.tokenService.getAvailableTokenMap(
+        agent.chainId,
+      );
       const tokenInfo = tokenMap[history.tokenAddress.toLowerCase()];
 
       let formattedAmount = Number(amount) / 10 ** tokenInfo.decimals;
 
       if (isNative) {
-        const priceResults = await this.priceService.getPrices([history.tokenAddress], agent.chainId);
-        const price = priceResults.find(price => price.token === tokenMap[NATIVE_TOKEN_ADDRESS].symbol.toUpperCase());
-        formattedAmount = price.price * Number(amount);
+        const priceResults = await this.priceService.getPrices(
+          ['ETH'],
+          agent.chainId,
+        );
+        const price = priceResults.find(
+          (price) => price.token === 'ETH',
+        );
+        formattedAmount = price.price * Number(amount) / 10 ** 18;
       }
 
       const depositDate = new Date(history.timestamp);
 
       const recalculate = true;
-      const deposit = await this.portfolioManager.createBalanceSnapshot(agentId, formattedAmount, formattedAmount, depositDate, recalculate);
+      const data: BalanceSnapshotInput = {
+        balance: balanceInfo.balance,
+        injection: formattedAmount,
+        date: depositDate,
+        transactionHash: recordDepositDto.transactionHash,
+      };
+      const deposit = await this.portfolioManager.createBalanceSnapshot(
+        agentId,
+        data,
+        recalculate,
+      );
       return deposit;
     } catch (e) {
+      console.error(e);
       throw new BadRequestException(`Failed to record deposit: ${e.message}`);
     }
   }
 
   async withdraw(agentId: string, withdrawTokenDto: WithdrawTokenDto) {
-    return this.cdpConnector.withdraw(agentId, withdrawTokenDto);
+    try {
+      const result = await this.cdpConnector.withdraw(
+        agentId,
+        withdrawTokenDto,
+      );
+      const transactionHash = result.getTransactionHash();
+
+      const agent = await this.findAgentById(agentId);
+      const balanceInfo = await this.getBalance(agentId);
+
+      const isNative = withdrawTokenDto.assetId === 'eth';
+      const amount = isNative
+        ? withdrawTokenDto.amount
+        : withdrawTokenDto.amount * 10 ** 6;
+
+      let formattedAmount = Number(amount) / 10 ** 6; // USDC decimals
+
+      if (isNative) {
+        const priceResults = await this.priceService.getPrices(
+          ['ETH'],
+          agent.chainId,
+        );
+        const price = priceResults.find((price) => price.token === 'ETH');
+        formattedAmount = price.price * Number(amount);
+      }
+
+      const data: BalanceSnapshotInput = {
+        balance: balanceInfo.balance,
+        injection: -formattedAmount,
+        date: new Date(),
+        transactionHash,
+      };
+      await this.portfolioManager.createBalanceSnapshot(agentId, data);
+      return result;
+    } catch (e) {
+      throw new BadRequestException(`Failed to withdraw: ${e.message}`);
+    }
+  }
+
+  async recordBalanceSnapshot(agentId: string) {
+    try {
+      const balanceInfo = await this.getBalance(agentId);
+      const data: BalanceSnapshotInput = {
+        balance: balanceInfo.balance,
+        injection: 0,
+        date: new Date(),
+      };
+      return await this.portfolioManager.createBalanceSnapshot(agentId, data);
+    } catch (e) {
+      throw new BadRequestException(
+        `Failed to record balance snapshot: ${e.message}`,
+      );
+    }
   }
 
   async buyAsset(agentId: string, buyDto: BuyDto) {
@@ -112,5 +211,4 @@ export class WalletService implements OnModuleInit {
   async faucet(agentId: string, token: string) {
     return this.cdpConnector.faucet(agentId, token);
   }
-
 }

@@ -1,4 +1,11 @@
-import { Body, Controller, Get, Post, UseGuards, ValidationPipe } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  UseGuards,
+  ValidationPipe,
+} from '@nestjs/common';
 import { ValidateAgentOwner } from 'src/common/decorators/validate-agent-owner.decorator';
 import { AgentGuard } from 'src/common/guards/agent.guard';
 import { WalletService } from './wallet.service';
@@ -19,6 +26,12 @@ export class WalletController {
   }
 
   @UseGuards(AgentGuard)
+  @Get('balance-chart')
+  getBalanceChart(@ValidateAgentOwner() agentId: string) {
+    return this.walletService.getBalanceChart(agentId);
+  }
+
+  @UseGuards(AgentGuard)
   @Post('record-deposit')
   recordDeposit(
     @ValidateAgentOwner() agentId: string,
@@ -34,6 +47,12 @@ export class WalletController {
     @Body() withdrawTokenDto: WithdrawTokenDto,
   ) {
     return this.walletService.withdraw(agentId, withdrawTokenDto);
+  }
+
+  @UseGuards(AgentGuard)
+  @Post('balance-snapshot')
+  createBalanceSnapshot(@ValidateAgentOwner() agentId: string) {
+    return this.walletService.recordBalanceSnapshot(agentId);
   }
 
   @UseGuards(AgentGuard)
@@ -57,10 +76,5 @@ export class WalletController {
     return this.walletService.faucet(agentId, faucetDto.token);
   }
 
-//   @UseGuards(AgentGuard)
-//   @Post('balance-snapshot')
-//   createBalanceSnapshot(@ValidateAgentOwner() agentId: string) {
-//     return this.walletService.createBalanceSnapshot(agentId);
-//   }
 
 }

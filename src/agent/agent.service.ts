@@ -1,4 +1,9 @@
-import { BadRequestException, Inject, Injectable, OnModuleInit } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  OnModuleInit,
+} from '@nestjs/common';
 import { CreateAgentDto } from './dto/create-agent.dto';
 import { UpdateStrategyDto } from './dto/update-strategy.dto';
 import { UpdateIntervalDto } from './dto/update-interval.dto';
@@ -381,12 +386,16 @@ export class AgentService implements OnModuleInit {
     }
   }
 
-  async createTradingPlan(id: string) {
+  async operateTrade(id: string) {
     const agent = await this.findOne(id);
     if (!agent) {
       throw new BadRequestException('Agent not found');
     }
-    return this.tradePlanner.createTradingPlan(agent);
+    const tradePlan = await this.tradePlanner.createTradingPlan(agent);
+    if (!tradePlan) {
+      throw new BadRequestException('No trade plan found');
+    }
+    const trade = await this.tradePlanner.executeTradingPlan(id, tradePlan);
+    return trade;
   }
-
 }

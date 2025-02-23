@@ -37,8 +37,6 @@ export class EthConnector {
               timestamp: block.timestamp * 1000
             };
 
-            console.log("Transfer: ", result);
-
             return result;
           }
         } catch {
@@ -54,8 +52,6 @@ export class EthConnector {
         value: transaction.value.toString(),
         timestamp: block.timestamp * 1000
       }
-
-      console.log("Native: ", result);
 
       return result;
 
