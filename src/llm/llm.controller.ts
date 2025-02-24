@@ -5,8 +5,8 @@ import { LlmService } from './llm.service';
 export class LlmController {
   constructor(private readonly llmService: LlmService) {}
 
-  @Get('generate-trade-plan')
-  generateTradePlan() {
-    return this.llmService.generateTradePlan('3');
+  @Get('create-trade-plan')
+  createTradePlan() {
+    return this.llmService.createTradePlan('3');
   }
 }

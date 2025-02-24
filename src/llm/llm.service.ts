@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { ChatOpenAI } from '@langchain/openai';
 import { ChatPromptTemplate } from '@langchain/core/prompts';
 import { JsonOutputParser } from '@langchain/core/output_parsers';
@@ -24,6 +24,7 @@ export class LlmService {
     private readonly chainService: ChainService,
     private readonly walletService: WalletService,
     private readonly priceService: PriceService,
+    @Inject(forwardRef(() => AgentService))
     private readonly agentService: AgentService,
   ) {
     this.model = new ChatOpenAI({
@@ -93,7 +94,7 @@ export class LlmService {
     };
   }
 
-  async generateTradePlan(agentId: string) {
+  async createTradePlan(agentId: string) {
     const {
       strategyDescription,
       knowledges,

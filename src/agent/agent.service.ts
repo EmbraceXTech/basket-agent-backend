@@ -24,6 +24,7 @@ import {
 import { AgentQueueProducer } from './agent-queue/agent-queue.producer';
 import { UpdateBulkDto } from './dto/update-bulk.dto';
 import { TradePlanner } from './trade-planner';
+import { LlmService } from 'src/llm/llm.service';
 
 @Injectable()
 export class AgentService implements OnModuleInit {
@@ -34,10 +35,11 @@ export class AgentService implements OnModuleInit {
     private readonly db: NodePgDatabase<typeof schema>,
     private readonly walletService: WalletService,
     private readonly agentQueueProducer: AgentQueueProducer,
+    private readonly llmService: LlmService,
   ) {}
 
   onModuleInit() {
-    this.tradePlanner = new TradePlanner(this.walletService);
+    this.tradePlanner = new TradePlanner(this.walletService, this.llmService);
   }
 
   async findAll(userId: string) {
@@ -391,7 +393,11 @@ export class AgentService implements OnModuleInit {
     if (!agent) {
       throw new BadRequestException('Agent not found');
     }
-    const tradePlan = await this.tradePlanner.createTradingPlan(agent);
+    const tradePlanSteps = await this.llmService.createTradePlan(id);
+    const tradePlan = {
+      steps: tradePlanSteps,
+    };
+    // const tradePlan = await this.tradePlanner.createTradingPlan(agent);
     if (!tradePlan) {
       throw new BadRequestException('No trade plan found');
     }
