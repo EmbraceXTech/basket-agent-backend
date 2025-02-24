@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 
 import { LlmService } from './llm.service';
 import { LlmController } from './llm.controller';
@@ -8,8 +8,14 @@ import { PriceModule } from 'src/price/price.module';
 import { AgentModule } from 'src/agent/agent.module';
 
 @Module({
-  imports: [ChainModule, WalletModule, PriceModule, AgentModule],
+  imports: [
+    ChainModule,
+    WalletModule,
+    PriceModule,
+    forwardRef(() => AgentModule),
+  ],
   controllers: [LlmController],
   providers: [LlmService],
+  exports: [LlmService],
 })
 export class LlmModule {}

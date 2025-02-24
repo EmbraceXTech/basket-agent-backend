@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { AgentController } from './agent.controller';
 import { AgentService } from './agent.service';
 import { WalletModule } from './wallet/wallet.module';
@@ -14,11 +14,13 @@ import { AgentExecuteConsumer } from './agent-queue/agent-execute.consumer';
 import { AgentEndDtConsumer } from './agent-queue/agent-end-dt.consumer';
 import { AgentSLTPConsumer } from './agent-queue/agent-sl-tp.consumer';
 import { config } from 'src/config';
+import { LlmModule } from 'src/llm/llm.module';
 
 @Module({
   imports: [
     WalletModule,
     PriceModule,
+    forwardRef(() => LlmModule),
     BullModule.registerQueue({
       name: AGENT_EXECUTE_QUEUE,
     }),
