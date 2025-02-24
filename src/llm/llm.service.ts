@@ -1,47 +1,107 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { OpenAI } from '@langchain/openai';
+import { Injectable } from '@nestjs/common';
+import { ChatOpenAI } from '@langchain/openai';
 import { ChatPromptTemplate } from '@langchain/core/prompts';
 import { JsonOutputParser } from '@langchain/core/output_parsers';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
-import { DrizzleAsyncProvider } from 'src/db/drizzle.provider';
-import * as schema from 'src/db/schema';
 import { config } from 'src/config';
 import { TradeStep } from 'src/agent/interfaces/trade.interface';
 import {
   tradePlanSystemPrompt,
   tradePlanUserMessage,
 } from './constants/promptTempalte.constant';
+import { ChainService } from 'src/chain/chain.service';
+import { WalletService } from 'src/agent/wallet/wallet.service';
+import { PriceService } from 'src/price/price.service';
+import { Token } from 'src/agent/interfaces/token.interface';
+import { AgentService } from 'src/agent/agent.service';
+import { ChainInfo } from 'src/chain/interfaces/chain-info.interface';
+import { PriceResponse } from 'src/price/interfaces/price-response.interface';
 
 @Injectable()
 export class LlmService {
-  private model: OpenAI;
+  private model: ChatOpenAI;
   constructor(
-    @Inject(DrizzleAsyncProvider)
-    private readonly db: NodePgDatabase<typeof schema>,
+    private readonly chainService: ChainService,
+    private readonly walletService: WalletService,
+    private readonly priceService: PriceService,
+    private readonly agentService: AgentService,
   ) {
-    this.model = new OpenAI({
+    this.model = new ChatOpenAI({
       modelName: 'gpt-3.5-turbo',
       apiKey: config.openaiApiKey,
     });
   }
 
-  async generateTradePlan() {
-    const strategyDescription =
-      'Market is bullish with strong momentum on BTC and ETH.';
-    const knowledges = [
-      { topic: 'BTC', insight: 'High trading volume detected.' },
+  async _fetchTradeInfo(agentId: string) {
+    const agent = await this.agentService.findOne(agentId);
+    const _tokensSelected = agent.selectedTokens.map(
+      (token) => JSON.parse(token) as Token,
+    );
+    // TODO: confirm use tokens or tokenValues
+    const promiseArray: [
+      Promise<{
+        equity: number;
+        performance: number;
+        tokens: (string | number)[][];
+        tokenValues: (string | number)[][];
+        balance: number;
+      }>,
+      Promise<ChainInfo>,
+      Promise<PriceResponse[]>,
+    ] = [
+      this.walletService.getBalance(agentId),
+      this.chainService.getChainInfo(parseInt(agent.chainId)),
+      this.priceService.getPrices(
+        _tokensSelected.map((token) => token.tokenSymbol.toUpperCase()),
+        agent.chainId,
+      ),
     ];
-    const tokensSelected = [
-      { tokenSymbol: 'BTC', tokenAddress: '0xbtc', price: 10000 },
-      { tokenSymbol: 'ETH', tokenAddress: '0xeth', price: 2000 },
-    ];
-    const tokensTradeAmount = [
-      { tokenSymbol: 'USDC', amount: 1000, price: 1 },
-      { tokenSymbol: 'BTC', amount: 0.5, price: 10000 },
-    ];
-    const usdcBalance =
-      tokensTradeAmount.find((t) => t.tokenSymbol === 'USDC')?.amount || 0;
+    const [balance, chainInfo, tokenPrices] = await Promise.all(promiseArray);
+    const tokensSelected = _tokensSelected.map((token) => ({
+      ...token,
+      price: tokenPrices.find(
+        (price) =>
+          price.token.toUpperCase() === token.tokenSymbol.toUpperCase(),
+      )?.price,
+    }));
+    const tokensTradeAmount = balance.tokens.map(([token, amount]) => ({
+      tokenSymbol: token,
+      amount,
+      price: tokensSelected.find((t) => t.tokenSymbol === token)?.price,
+    }));
+    const usdcTokenFound = tokensTradeAmount.find(
+      (t) => t.tokenSymbol.toString().toUpperCase() === 'USDC',
+    );
+    if (!usdcTokenFound) {
+      tokensTradeAmount.push({
+        tokenSymbol: 'USDC',
+        amount: 0,
+        price: 1,
+      });
+    }
+    const usdcBalance = usdcTokenFound?.amount || 0;
+    return {
+      strategyDescription: agent.strategy,
+      knowledges: agent.knowledge.map((knowledge) => ({
+        topic: knowledge.name,
+        insight: knowledge.content,
+      })),
+      tokensSelected,
+      chainInfo,
+      tokensTradeAmount,
+      usdcBalance,
+    };
+  }
+
+  async generateTradePlan(agentId: string) {
+    const {
+      strategyDescription,
+      knowledges,
+      chainInfo,
+      tokensSelected,
+      tokensTradeAmount,
+      usdcBalance,
+    } = await this._fetchTradeInfo(agentId);
     const parser = new JsonOutputParser<Array<TradeStep>>();
     const promptTemplate = ChatPromptTemplate.fromMessages([
       ['system', tradePlanSystemPrompt],
@@ -56,6 +116,8 @@ export class LlmService {
       tokensSelected: JSON.stringify(tokensSelected, null, 2),
       tokensTradeAmount: JSON.stringify(tokensTradeAmount, null, 2),
       usdcBalance,
+      chain: chainInfo.name,
+      chainId: chainInfo.chainId,
     });
     return result;
   }

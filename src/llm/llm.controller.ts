@@ -7,6 +7,6 @@ export class LlmController {
 
   @Get('generate-trade-plan')
   generateTradePlan() {
-    return this.llmService.generateTradePlan();
+    return this.llmService.generateTradePlan('3');
   }
 }
