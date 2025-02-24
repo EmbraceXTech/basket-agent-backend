@@ -5,5 +5,6 @@ import { ChainController } from './chain.controller';
 @Module({
   controllers: [ChainController],
   providers: [ChainService],
+  exports: [ChainService],
 })
 export class ChainModule {}

@@ -37,5 +37,6 @@ import { config } from 'src/config';
       ? [AgentExecuteConsumer, AgentEndDtConsumer, AgentSLTPConsumer]
       : []),
   ],
+  exports: [AgentService],
 })
 export class AgentModule {}
