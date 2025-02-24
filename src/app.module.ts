@@ -10,6 +10,7 @@ import { ChainModule } from './chain/chain.module';
 import { TokenModule } from './token/token.module';
 import { BullModule } from '@nestjs/bullmq';
 import { config } from './config';
+import { LlmModule } from './llm/llm.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { config } from './config';
     PriceModule,
     ChainModule,
     TokenModule,
+    LlmModule,
     BullModule.forRoot({
       connection: {
         host: config.redisHost,
