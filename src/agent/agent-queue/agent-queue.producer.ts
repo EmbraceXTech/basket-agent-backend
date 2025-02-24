@@ -6,6 +6,8 @@ import {
   AGENT_END_DT_QUEUE,
   AGENT_SL_TP_QUEUE,
   AGENT_SL_TP_INTERVAL,
+  AGENT_SNAPSHOT_QUEUE,
+  AGENT_SNAPSHOT_INTERVAL,
 } from 'src/constant/queue.constant';
 
 @Injectable()
@@ -17,9 +19,16 @@ export class AgentQueueProducer implements OnModuleInit {
     private readonly agentExecuteQueue: Queue,
     @InjectQueue(AGENT_END_DT_QUEUE)
     private readonly agentEndDtQueue: Queue,
+    @InjectQueue(AGENT_SNAPSHOT_QUEUE)
+    private readonly agentSnapshotQueue: Queue,
   ) {}
 
   async onModuleInit() {
+    this.initializeSLTpJob();
+    this.initializeSnapshotJob();
+  }
+
+  async initializeSLTpJob() {
     const jobs = await this.agentSlTpQueue.getJobSchedulers();
     const job = jobs.find((job) => job.name === AGENT_SL_TP_QUEUE);
     if (!job) {
@@ -31,6 +40,18 @@ export class AgentQueueProducer implements OnModuleInit {
             every: AGENT_SL_TP_INTERVAL,
           },
         },
+      );
+    }
+  }
+
+  async initializeSnapshotJob() {
+    const jobs = await this.agentSnapshotQueue.getJobSchedulers();
+    const job = jobs.find((job) => job.name === AGENT_SNAPSHOT_QUEUE);
+    if (!job) {
+      await this.agentSnapshotQueue.add(
+        AGENT_SNAPSHOT_QUEUE,
+        {},
+        { repeat: { every: AGENT_SNAPSHOT_INTERVAL } },
       );
     }
   }

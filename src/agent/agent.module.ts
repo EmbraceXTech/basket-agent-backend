@@ -8,11 +8,13 @@ import {
   AGENT_EXECUTE_QUEUE,
   AGENT_END_DT_QUEUE,
   AGENT_SL_TP_QUEUE,
+  AGENT_SNAPSHOT_QUEUE,
 } from 'src/constant/queue.constant';
 import { AgentQueueProducer } from './agent-queue/agent-queue.producer';
 import { AgentExecuteConsumer } from './agent-queue/agent-execute.consumer';
 import { AgentEndDtConsumer } from './agent-queue/agent-end-dt.consumer';
 import { AgentSLTPConsumer } from './agent-queue/agent-sl-tp.consumer';
+import { AgentSnapshotConsumer } from './agent-queue/agent-snapshot.consumer';
 import { config } from 'src/config';
 import { LlmModule } from 'src/llm/llm.module';
 
@@ -30,13 +32,21 @@ import { LlmModule } from 'src/llm/llm.module';
     BullModule.registerQueue({
       name: AGENT_SL_TP_QUEUE,
     }),
+    BullModule.registerQueue({
+      name: AGENT_SNAPSHOT_QUEUE,
+    }),
   ],
   controllers: [AgentController],
   providers: [
     AgentService,
     AgentQueueProducer,
     ...(config.nodeEnv === 'development'
-      ? [AgentExecuteConsumer, AgentEndDtConsumer, AgentSLTPConsumer]
+      ? [
+          AgentExecuteConsumer,
+          AgentEndDtConsumer,
+          AgentSLTPConsumer,
+          AgentSnapshotConsumer,
+        ]
       : []),
   ],
   exports: [AgentService],
