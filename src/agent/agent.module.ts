@@ -40,7 +40,7 @@ import { LlmModule } from 'src/llm/llm.module';
   providers: [
     AgentService,
     AgentQueueProducer,
-    ...(config.nodeEnv === 'development'
+    ...(config.nodeEnv === 'production'
       ? [
           AgentExecuteConsumer,
           AgentEndDtConsumer,
