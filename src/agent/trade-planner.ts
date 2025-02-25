@@ -93,7 +93,7 @@ export class TradePlanner {
       //     });
       //   }
       // }
-      const tradeSteps = await this.llmService.createTradePlan(
+      const { thoughts, tradeSteps } = await this.llmService.createTradePlan(
         agent.id.toString(),
       );
 
@@ -120,12 +120,9 @@ export class TradePlanner {
           result.push(trade);
         }
       }
-      console.log('Result: ', result);
       return result;
     } catch (error) {
-      throw new BadRequestException(
-        `Failed to execute trading plan: ${error.message}`,
-      );
+      throw error;
     }
   }
 }

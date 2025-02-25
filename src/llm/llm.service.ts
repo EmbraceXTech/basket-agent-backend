@@ -4,7 +4,7 @@ import { ChatPromptTemplate } from '@langchain/core/prompts';
 import { JsonOutputParser } from '@langchain/core/output_parsers';
 
 import { config } from 'src/config';
-import { TradeStep } from 'src/agent/interfaces/trade.interface';
+import { AgentTradePlan, TradeStep } from 'src/agent/interfaces/trade.interface';
 import {
   tradePlanSystemPrompt,
   tradePlanUserMessage,
@@ -16,6 +16,7 @@ import { Token } from 'src/agent/interfaces/token.interface';
 import { AgentService } from 'src/agent/agent.service';
 import { ChainInfo } from 'src/chain/interfaces/chain-info.interface';
 import { PriceResponse } from 'src/price/interfaces/price-response.interface';
+import { reTradePlanSystemPrompt, reTradePlanUserMessage } from './constants/re-create-promptTempalte.constant';
 
 @Injectable()
 export class LlmService {
@@ -28,7 +29,7 @@ export class LlmService {
     private readonly agentService: AgentService,
   ) {
     this.model = new ChatOpenAI({
-      modelName: 'gpt-3.5-turbo',
+      modelName: 'gpt-4o',
       apiKey: config.openaiApiKey,
     });
   }
@@ -94,7 +95,7 @@ export class LlmService {
     };
   }
 
-  async createTradePlan(agentId: string) {
+  async createTradePlan(agentId: string, tempStrategyDescription?: string) {
     const {
       strategyDescription,
       knowledges,
@@ -103,10 +104,42 @@ export class LlmService {
       tokensTradeAmount,
       usdcBalance,
     } = await this._fetchTradeInfo(agentId);
-    const parser = new JsonOutputParser<Array<TradeStep>>();
+
+    const strategyDescriptionPrompt = tempStrategyDescription || strategyDescription;
+
+    const parser = new JsonOutputParser<AgentTradePlan>();
     const promptTemplate = ChatPromptTemplate.fromMessages([
       ['system', tradePlanSystemPrompt],
       ['user', tradePlanUserMessage],
+    ]);
+
+    const chain = promptTemplate.pipe(this.model).pipe(parser);
+
+    const result = await chain.invoke({
+      strategyDescription: strategyDescriptionPrompt,
+      knowledges: JSON.stringify(knowledges, null, 2),
+      tokensSelected: JSON.stringify(tokensSelected, null, 2),
+      tokensTradeAmount: JSON.stringify(tokensTradeAmount, null, 2),
+      usdcBalance,
+      chain: chainInfo.name,
+      chainId: chainInfo.chainId,
+    });
+    return result;
+  }
+
+  async reCreateTradePlan(agentId: string, error: any) {
+    const {
+      strategyDescription,
+      knowledges,
+      chainInfo,
+      tokensSelected,
+      tokensTradeAmount,
+      usdcBalance,
+    } = await this._fetchTradeInfo(agentId);
+    const parser = new JsonOutputParser<AgentTradePlan>();
+    const promptTemplate = ChatPromptTemplate.fromMessages([
+      ['system', reTradePlanSystemPrompt],
+      ['user', reTradePlanUserMessage],
     ]);
 
     const chain = promptTemplate.pipe(this.model).pipe(parser);
@@ -119,7 +152,9 @@ export class LlmService {
       usdcBalance,
       chain: chainInfo.name,
       chainId: chainInfo.chainId,
+      error: JSON.stringify(error, null, 2),
     });
     return result;
   }
+
 }

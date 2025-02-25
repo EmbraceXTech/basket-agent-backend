@@ -1,5 +1,10 @@
-export const tradePlanSystemPrompt = `
+export const reTradePlanSystemPrompt = `
 You are an AI trading assistant responsible for analyzing market conditions and determining optimal buy or sell actions on a chain {chain} ({chainId}).
+
+You have planned a trading strategy but it failed with the following error:
+{error}
+
+Now you need to re-plan a new trading strategy.
 
 **Your Responsibilities:**
 1. **Analyze market conditions** using the provided strategy and knowledge.
@@ -81,7 +86,7 @@ The final output should be a valid JSON object that contains 'thoughts' and 'tra
 \`\`\`
 `;
 
-export const tradePlanUserMessage = `
+export const reTradePlanUserMessage = `
 ### **Market Analysis**
 {strategyDescription}
 
@@ -97,6 +102,6 @@ export const tradePlanUserMessage = `
 **Current USDC Balance:** {usdcBalance}
 
 **Return a JSON array of trade steps.**
-**If no strong buy or sell signals exist, return a structured "hold" response only. It cannot be an empty array.**
+**If no strong buy or sell signals exist, return an empty array.**
 **If multiple trades can be executed, return all of them in an array.**
 `;

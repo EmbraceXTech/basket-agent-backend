@@ -7,17 +7,19 @@ import * as schema from 'src/db/schema';
 import { eq } from 'drizzle-orm';
 import { COINBASE_CHAIN_ID_MAP } from './constants/coinbase-chain.const';
 import {
-  COINBASE_ASSET_MAP,
-  USDC_ASSET_MAP,
+  // COINBASE_ASSET_MAP,
+  // USDC_ASSET_MAP,
 } from './constants/coinbase-asset.const';
 import { SellDto } from './dto/sell.dto';
 import { BuyDto } from './dto/buy.dto';
 import { PriceService } from 'src/price/price.service';
+import { TokenService } from 'src/token/token.service';
 
 export class CdpConnector {
   constructor(
     private db: NodePgDatabase<typeof schema>,
     private priceService: PriceService,
+    private tokenService: TokenService,
   ) {
     Coinbase.configure({
       apiKeyName: config.cdpApiKeyName,
@@ -37,11 +39,17 @@ export class CdpConnector {
         ([asset]) => asset !== Coinbase.assets.Usdc,
       );
       const prices = await this.priceService.getPrices(
-        tokenBalances.map(([asset]) => asset),
+        tokenBalances.map(([asset]) => asset.toUpperCase()),
       );
+      console.log('tokenBalances: ', tokenBalances.map(([asset]) => asset.toUpperCase()));
+      console.log('prices: ', prices);
       const priceMap = new Map(prices.map((price) => [price.token, price]));
       const tokenValues = Array.from(balances).map(([asset, balance]) => {
         const price = priceMap.get(asset.toUpperCase());
+
+        console.log('price: ', price);
+        console.log('asset: ', asset);
+
         return [
           asset,
           asset === Coinbase.assets.Usdc
@@ -49,19 +57,17 @@ export class CdpConnector {
             : Number(balance) * Number(price.price),
         ];
       });
-      const tokenValueUSD = tokenBalances.reduce((acc, [asset, balance]) => {
-        const price = priceMap.get(asset.toUpperCase());
-        return acc + Number(balance) * Number(price.price);
+      const balance = tokenValues.reduce((acc, [asset, valueUSD]) => {
+        return acc + Number(valueUSD);
       }, 0);
-      const totalValueUSD =
-        tokenValueUSD + Number(balances.get(Coinbase.assets.Usdc));
+
       return {
         tokens: Array.from(balances).map(([asset, balance]) => [
           asset,
           Number(balance),
         ]),
         tokenValues,
-        balance: totalValueUSD,
+        balance,
       };
     } catch (e) {
       throw e;
@@ -127,10 +133,10 @@ export class CdpConnector {
 
   async buyAsset(agentId: string, buyDto: BuyDto) {
     const agent = await this.findAgentById(agentId);
-    const usdcAsset = USDC_ASSET_MAP[agent.chainId];
+    const tokenMap = await this.tokenService.getAvailableTokenMap(agent.chainId);
     return this.trade(
       agentId,
-      usdcAsset.tokenAddress,
+      tokenMap['usdc'].address,
       buyDto.tokenAddress,
       buyDto.usdAmount,
     );
@@ -138,11 +144,11 @@ export class CdpConnector {
 
   async sellAsset(agentId: string, sellDto: SellDto) {
     const agent = await this.findAgentById(agentId);
-    const usdcAsset = USDC_ASSET_MAP[agent.chainId];
+    const tokenMap = await this.tokenService.getAvailableTokenMap(agent.chainId);
     return this.trade(
       agentId,
       sellDto.tokenAddress,
-      usdcAsset.tokenAddress,
+      tokenMap['usdc'].address,
       sellDto.tokenAmount,
     );
   }
@@ -155,13 +161,13 @@ export class CdpConnector {
   ) {
     const agent = await this.findAgentById(agentId);
     const agentWallet = await this.getCoinbaseWallet(agentId);
-    const assets = COINBASE_ASSET_MAP[agent.chainId];
-    const inputAsset = assets[inputTokenAddress.toLowerCase()];
-    const outputAsset = assets[outputTokenAddress.toLowerCase()];
+    const tokenMap = await this.tokenService.getAvailableTokenMap(agent.chainId);
+    const inputAsset = tokenMap[inputTokenAddress.toLowerCase()];
+    const outputAsset = tokenMap[outputTokenAddress.toLowerCase()];
     const trade = await agentWallet.createTrade({
       amount: Number(amount.toFixed(inputAsset.decimals)),
-      fromAssetId: inputAsset.coinbaseAssetId,
-      toAssetId: outputAsset.coinbaseAssetId,
+      fromAssetId: inputAsset.symbol.toLowerCase(),
+      toAssetId: outputAsset.symbol.toLowerCase(),
     });
 
     // Wait for the trade to settle.

@@ -35,7 +35,7 @@ export class WalletService implements OnModuleInit {
   ) {}
 
   onModuleInit() {
-    this.cdpConnector = new CdpConnector(this.db, this.priceService);
+    this.cdpConnector = new CdpConnector(this.db, this.priceService, this.tokenService);
     this.portfolioManager = new PortfolioManager(this.db);
     this.ethConnector = new EthConnector();
   }

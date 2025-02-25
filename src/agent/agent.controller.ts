@@ -22,6 +22,7 @@ import { ValidateAgentOwner } from 'src/common/decorators/validate-agent-owner.d
 import { ValidateUser } from 'src/common/decorators/validate-user.decorator';
 import { WalletService } from './wallet/wallet.service';
 import { UpdateBulkDto } from './dto/update-bulk.dto';
+import { SimulateTradeDto } from './dto/simulate-trade.dto';
 
 @Controller('agent')
 export class AgentController {
@@ -160,4 +161,15 @@ export class AgentController {
     return this.agentService.updateBulk(agentId, updateBulkDto);
   }
 
+  @UseGuards(AgentGuard)
+  @Post(':agentId/operate-trade')
+  operateTrade(@ValidateAgentOwner() agentId: string) {
+    return this.agentService.operateTrade(agentId);
+  }
+
+  @UseGuards(AgentGuard)
+  @Post(':agentId/simulate-trade')
+  simulateTrade(@ValidateAgentOwner() agentId: string, @Body() simulateTradeDto: SimulateTradeDto) {
+    return this.agentService.simulateTrade(agentId, simulateTradeDto.strategyDescription);
+  }
 }

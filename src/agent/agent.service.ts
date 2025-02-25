@@ -388,20 +388,38 @@ export class AgentService implements OnModuleInit {
     }
   }
 
+  async simulateTrade(id: string, strategyDescription?: string) {
+    const agent = await this.findOne(id);
+    if (!agent) {
+      throw new BadRequestException('Agent not found');
+    }
+    return await this.llmService.createTradePlan(id, strategyDescription);
+  }
+
   async operateTrade(id: string) {
     const agent = await this.findOne(id);
     if (!agent) {
       throw new BadRequestException('Agent not found');
     }
-    const tradePlanSteps = await this.llmService.createTradePlan(id);
+    const agentTradePlan = await this.llmService.createTradePlan(id);
     const tradePlan = {
-      steps: tradePlanSteps,
+      steps: agentTradePlan.tradeSteps,
     };
-    // const tradePlan = await this.tradePlanner.createTradingPlan(agent);
-    if (!tradePlan) {
-      throw new BadRequestException('No trade plan found');
+
+    let error: any;
+    try {
+      const trade = await this.tradePlanner.executeTradingPlan(id, tradePlan);
+      return trade;
+    } catch (e) {
+      error = e;
     }
-    const trade = await this.tradePlanner.executeTradingPlan(id, tradePlan);
-    return trade;
+
+    const reTradePlan = await this.llmService.reCreateTradePlan(id, error);
+    const reTradePlanDto = {
+      steps: reTradePlan.tradeSteps,
+    };
+    const reTrade = await this.tradePlanner.executeTradingPlan(id, reTradePlanDto);
+    return reTrade;
   }
+
 }
