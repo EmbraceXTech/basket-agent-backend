@@ -33,6 +33,7 @@ jobs:
           REDIS_HOST=${{secrets.REDIS_HOST}}
           REDIS_PORT=${{secrets.REDIS_PORT}}
           REDIS_PASSWORD=${{secrets.REDIS_PASSWORD}}
+          BASE_RPC_URL=${{secrets.BASE_RPC_URL}}
           EOF
 
       - name: Run Docker Compose
