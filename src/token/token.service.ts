@@ -48,6 +48,18 @@ export class TokenService {
     return tokens;
   }
 
+  async getAvailableTokenMap(
+    chainId: number | string,
+  ): Promise<TokenInfoMap> {
+    const tokens = await this.getAvailableTokens(chainId, true);
+    const tokenAddressMap = Object.fromEntries(tokens.map(token => [token.address.toLowerCase(), token]));
+    const tokenSymbolMap = Object.fromEntries(tokens.map(token => [token.symbol.toLowerCase(), token]));
+    return {
+      ...tokenAddressMap,
+      ...tokenSymbolMap,
+    };
+  }
+
   async getBasedToken(chainId: number | string): Promise<TokenInfo> {
     const tokenList = await this.readTokenList(chainId);
     return Object.values(tokenList).find(

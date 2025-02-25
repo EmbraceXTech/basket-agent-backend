@@ -25,4 +25,6 @@ export const config = {
   redisHost: process.env.REDIS_HOST || '',
   redisPort: parseInt(process.env.REDIS_PORT || '6379'),
   redisPassword: process.env.REDIS_PASSWORD || '',
+  openaiApiKey: process.env.OPENAI_API_KEY || '',
+  baseRpcUrl: process.env.BASE_RPC_URL || '',
 };

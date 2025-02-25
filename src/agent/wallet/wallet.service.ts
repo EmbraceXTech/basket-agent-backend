@@ -1,68 +1,63 @@
-import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
-import { Coinbase, Wallet } from '@coinbase/coinbase-sdk';
-import { config } from 'src/config';
-import * as crypto from 'crypto';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  OnModuleInit,
+} from '@nestjs/common';
 import { WithdrawTokenDto } from './dto/withdraw-token.dto';
 import { DrizzleAsyncProvider } from 'src/db/drizzle.provider';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from 'src/db/schema';
 import { eq } from 'drizzle-orm';
-import {
-  COINBASE_CHAIN_ID_MAP,
-  // COINBASE_CHAIN_ID_HEX_MAP,
-  COINBASE_NETWORK_ID_MAP,
-} from './constants/coinbase-chain.const';
-import {
-  COINBASE_ASSET_MAP,
-  USDC_ASSET_MAP,
-} from './constants/coinbase-asset.const';
 import { SellDto } from './dto/sell.dto';
 import { BuyDto } from './dto/buy.dto';
 import { PriceService } from 'src/price/price.service';
+import { CdpConnector } from './cdp-connector';
+import { PortfolioManager } from './portfolio-manager';
+import { RecordDepositDto } from './dto/record-deposit.dto';
+import { EthConnector } from './eth-connector';
+import { config } from 'src/config';
+import { NATIVE_TOKEN_ADDRESS } from 'src/constant/eth.constant';
+import { TokenService } from 'src/token/token.service';
+import { BalanceSnapshotInput } from './interfaces/balance-snapshot.interface';
 
 @Injectable()
 export class WalletService implements OnModuleInit {
+  private cdpConnector: CdpConnector;
+  private portfolioManager: PortfolioManager;
+  private ethConnector: EthConnector;
+
   constructor(
     @Inject(DrizzleAsyncProvider)
     private readonly db: NodePgDatabase<typeof schema>,
     private priceService: PriceService,
+    private tokenService: TokenService,
   ) {}
 
   onModuleInit() {
-    Coinbase.configure({
-      apiKeyName: config.cdpApiKeyName,
-      privateKey: config.cdpApiKeyPrivateKey,
-    });
+    this.cdpConnector = new CdpConnector(this.db, this.priceService, this.tokenService);
+    this.portfolioManager = new PortfolioManager(this.db);
+    this.ethConnector = new EthConnector();
   }
 
   async createAgentWallet(chainIdHex: string) {
-    return this.createCoinbaseWallet(chainIdHex);
+    return this.cdpConnector.createAgentWallet(chainIdHex);
   }
 
   async getBalance(agentId: string) {
-    try {
-      const wallet = await this.getCoinbaseWallet(agentId);
-      const balances = await wallet.listBalances();
-      const tokenBalances = Array.from(balances).filter(
-        ([asset]) => asset !== Coinbase.assets.Usdc,
-      );
-      const prices = await this.priceService.getPrices(
-        tokenBalances.map(([asset]) => asset),
-      );
-      const priceMap = new Map(prices.map((price) => [price.token, price]));
-      const tokenValueUSD = tokenBalances.reduce((acc, [asset, balance]) => {
-        const price = priceMap.get(asset.toUpperCase());
-        return acc + Number(balance) * Number(price.price);
-      }, 0);
-      const totalValueUSD =
-        tokenValueUSD + Number(balances.get(Coinbase.assets.Usdc));
-      return {
-        tokens: Array.from(balances),
-        balance: totalValueUSD,
-      };
-    } catch (e) {
-      throw e;
-    }
+    const walletBalance = await this.cdpConnector.getBalance(agentId);
+    const balanceSnapshot = await this.portfolioManager.getLastSnapshot(
+      agentId,
+    );
+    return {
+      ...walletBalance,
+      equity: balanceSnapshot ? balanceSnapshot.equity : 0,
+      performance: balanceSnapshot ? balanceSnapshot.performance : 0,
+    };
+  }
+
+  async getBalanceChart(agentId: string) {
+    return this.portfolioManager.getBalanceSnapshotTimeSeries(agentId);
   }
 
   async findByAgentId(agentId: string) {
@@ -79,147 +74,141 @@ export class WalletService implements OnModuleInit {
     return result;
   }
 
-  async withdraw(agentId: string, withdrawTokenDto: WithdrawTokenDto) {
-    return this.transferFromAgent(
-      agentId,
-      withdrawTokenDto.recipientAddress,
-      withdrawTokenDto.amount,
-    );
+  async recordDeposit(agentId: string, recordDepositDto: RecordDepositDto) {
+    try {
+      const agent = await this.findAgentById(agentId);
+      const walletInfo = await this.cdpConnector.getCoinbaseWallet(agentId);
+      const balanceInfo = await this.getBalance(agentId);
+      const history = await this.ethConnector.getTransferHistory(
+        config.baseRpcUrl,
+        recordDepositDto.transactionHash,
+      );
+
+      const walletAddress = await walletInfo
+        .getDefaultAddress()
+        .then((res) => res.getId());
+      if (history.toAddress.toLowerCase() !== walletAddress.toLowerCase()) {
+        throw new BadRequestException(
+          `Deposit destination address does not match agent wallet`,
+        );
+      }
+
+      const isNative =
+        history.tokenAddress.toLowerCase() === NATIVE_TOKEN_ADDRESS;
+      const amount = isNative ? history.value : history.amount;
+
+      const existingDeposit = await this.portfolioManager.findExistingDeposit(
+        agentId,
+        recordDepositDto.transactionHash,
+      );
+      if (existingDeposit) {
+        throw new BadRequestException(`Deposit already exists`);
+      }
+
+      const tokenMap = await this.tokenService.getAvailableTokenMap(
+        agent.chainId,
+      );
+      const tokenInfo = tokenMap[history.tokenAddress.toLowerCase()];
+
+      let formattedAmount = Number(amount) / 10 ** tokenInfo.decimals;
+
+      if (isNative) {
+        const priceResults = await this.priceService.getPrices(
+          ['ETH'],
+          agent.chainId,
+        );
+        const price = priceResults.find(
+          (price) => price.token === 'ETH',
+        );
+        formattedAmount = price.price * Number(amount) / 10 ** 18;
+      }
+
+      const depositDate = new Date(history.timestamp);
+
+      const recalculate = true;
+      const data: BalanceSnapshotInput = {
+        balance: balanceInfo.balance,
+        injection: formattedAmount,
+        date: depositDate,
+        transactionHash: recordDepositDto.transactionHash,
+      };
+      const deposit = await this.portfolioManager.createBalanceSnapshot(
+        agentId,
+        data,
+        recalculate,
+      );
+      return deposit;
+    } catch (e) {
+      console.error(e);
+      throw new BadRequestException(`Failed to record deposit: ${e.message}`);
+    }
   }
 
-  async transferFromAgent(
-    agentId: string,
-    recipientAddress: string,
-    amount: number,
-  ) {
+  async withdraw(agentId: string, withdrawTokenDto: WithdrawTokenDto) {
     try {
-      const agentWallet = await this.getCoinbaseWallet(agentId);
-      if (!agentWallet) {
-        throw new Error('Agent wallet not found');
+      const result = await this.cdpConnector.withdraw(
+        agentId,
+        withdrawTokenDto,
+      );
+      const transactionHash = result.getTransactionHash();
+
+      const agent = await this.findAgentById(agentId);
+      const balanceInfo = await this.getBalance(agentId);
+
+      const isNative = withdrawTokenDto.assetId === 'eth';
+      const amount = isNative
+        ? withdrawTokenDto.amount
+        : withdrawTokenDto.amount * 10 ** 6;
+
+      let formattedAmount = Number(amount) / 10 ** 6; // USDC decimals
+
+      if (isNative) {
+        const priceResults = await this.priceService.getPrices(
+          ['ETH'],
+          agent.chainId,
+        );
+        const price = priceResults.find((price) => price.token === 'ETH');
+        formattedAmount = price.price * Number(amount);
       }
 
-      const transfer = await agentWallet.createTransfer({
-        amount,
-        assetId: Coinbase.assets.Usdc,
-        destination: recipientAddress,
-      });
-
-      // Wait for the transfer to settle.
-      await transfer.wait();
-
-      // Check if the transfer successfully completed on-chain.
-      if (transfer.getStatus() === 'complete') {
-        console.log(`Transfer successfully completed: `, transfer.toString());
-        return transfer;
-      } else {
-        console.error('Transfer failed on-chain: ', transfer.toString());
-        throw new Error('Transfer failed on-chain');
-      }
+      const data: BalanceSnapshotInput = {
+        balance: balanceInfo.balance,
+        injection: -formattedAmount,
+        date: new Date(),
+        transactionHash,
+      };
+      await this.portfolioManager.createBalanceSnapshot(agentId, data);
+      return result;
     } catch (e) {
-      throw e;
+      throw new BadRequestException(`Failed to withdraw: ${e.message}`);
+    }
+  }
+
+  async recordBalanceSnapshot(agentId: string) {
+    try {
+      const balanceInfo = await this.getBalance(agentId);
+      const data: BalanceSnapshotInput = {
+        balance: balanceInfo.balance,
+        injection: 0,
+        date: new Date(),
+      };
+      return await this.portfolioManager.createBalanceSnapshot(agentId, data);
+    } catch (e) {
+      throw new BadRequestException(
+        `Failed to record balance snapshot: ${e.message}`,
+      );
     }
   }
 
   async buyAsset(agentId: string, buyDto: BuyDto) {
-    const agent = await this.findAgentById(agentId);
-    const usdcAsset = USDC_ASSET_MAP[agent.chainId];
-    return this.trade(
-      agentId,
-      usdcAsset.tokenAddress,
-      buyDto.tokenAddress,
-      buyDto.usdAmount,
-    );
+    return this.cdpConnector.buyAsset(agentId, buyDto);
   }
 
   async sellAsset(agentId: string, sellDto: SellDto) {
-    const agent = await this.findAgentById(agentId);
-    const usdcAsset = USDC_ASSET_MAP[agent.chainId];
-    return this.trade(
-      agentId,
-      sellDto.tokenAddress,
-      usdcAsset.tokenAddress,
-      sellDto.tokenAmount,
-    );
-  }
-
-  async trade(
-    agentId: string,
-    inputTokenAddress: string,
-    outputTokenAddress: string,
-    amount: number,
-  ) {
-    const agent = await this.findAgentById(agentId);
-    const agentWallet = await this.getCoinbaseWallet(agentId);
-    const assets = COINBASE_ASSET_MAP[agent.chainId];
-    const inputAsset = assets[inputTokenAddress];
-    const outputAsset = assets[outputTokenAddress];
-    const trade = await agentWallet.createTrade({
-      amount,
-      fromAssetId: inputAsset.coinbaseAssetId,
-      toAssetId: outputAsset.coinbaseAssetId,
-    });
-
-    // Wait for the trade to settle.
-    return await trade.wait();
+    return this.cdpConnector.sellAsset(agentId, sellDto);
   }
 
   async faucet(agentId: string, token: string) {
-    try {
-      const wallet = await this.getCoinbaseWallet(agentId);
-      const faucetTx = await wallet.faucet(token);
-      await faucetTx.wait();
-      return {
-        transactionHash: faucetTx.getTransactionHash(),
-      };
-    } catch (e) {
-      throw e;
-    }
-  }
-
-  private async getCoinbaseWallet(agentId: string) {
-    try {
-      const agentWalletInfo = await this.findByAgentId(agentId);
-      const { ivString, encryptedWalletData } = agentWalletInfo;
-      const iv = Buffer.from(ivString, 'hex');
-      const walletData = JSON.parse(this.decrypt(encryptedWalletData, iv));
-      return Wallet.import(walletData);
-    } catch (e) {
-      throw e;
-    }
-  }
-
-  private async createCoinbaseWallet(chainId: string) {
-    console.log('Creating coinbase wallet for chainId: ', chainId);
-    try {
-      const wallet = await Wallet.create({
-        networkId: COINBASE_CHAIN_ID_MAP[chainId].id,
-      });
-      const iv = crypto.randomBytes(16);
-      const encryptedWalletData = this.encrypt(
-        JSON.stringify(wallet.export()),
-        iv,
-      );
-      return {
-        address: await wallet.getDefaultAddress().then((res) => res.getId()),
-        ivString: iv.toString('hex'),
-        encryptedWalletData,
-      };
-    } catch (e) {
-      console.error('Error creating coinbase wallet: ', e);
-      throw e;
-    }
-  }
-
-  // Encrypt and Decrypt functions
-  private encrypt(text: string, iv: Buffer) {
-    const encryptionKey = Buffer.from(config.cdpSkEncryptionKey, 'hex');
-    const cipher = crypto.createCipheriv('aes-256-cbc', encryptionKey, iv);
-    return cipher.update(text, 'utf8', 'hex') + cipher.final('hex');
-  }
-
-  private decrypt(encrypted: string, iv: Buffer) {
-    const encryptionKey = Buffer.from(config.cdpSkEncryptionKey, 'hex');
-    const decipher = crypto.createDecipheriv('aes-256-cbc', encryptionKey, iv);
-    return decipher.update(encrypted, 'hex', 'utf8') + decipher.final('utf8');
+    return this.cdpConnector.faucet(agentId, token);
   }
 }

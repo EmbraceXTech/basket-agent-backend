@@ -5,12 +5,19 @@ import {
   BadRequestException,
   ForbiddenException,
   NotFoundException,
+  Inject,
 } from '@nestjs/common';
-import { AgentService } from 'src/agent/agent.service';
+import { eq } from 'drizzle-orm';
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { DrizzleAsyncProvider } from 'src/db/drizzle.provider';
+import * as schema from 'src/db/schema';
 
 @Injectable()
 export class AgentGuard implements CanActivate {
-  constructor(private agentService: AgentService) {}
+  constructor(
+    @Inject(DrizzleAsyncProvider)
+    private readonly db: NodePgDatabase<typeof schema>,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
@@ -20,7 +27,7 @@ export class AgentGuard implements CanActivate {
       throw new BadRequestException('agentId is required');
     }
 
-    const agent = await this.agentService.findOne(agentId);
+    const agent = await this.findAgent(agentId);
 
     if (!agent) {
       throw new NotFoundException('Agent not found');
@@ -33,5 +40,12 @@ export class AgentGuard implements CanActivate {
     request.agentId = agentId;
 
     return true;
+  }
+
+  async findAgent(agentId: string) {
+    const agent = await this.db.query.agentsTable.findFirst({
+      where: eq(schema.agentsTable.id, +agentId),
+    });
+    return agent;
   }
 }

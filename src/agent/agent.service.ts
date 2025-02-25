@@ -1,4 +1,9 @@
-import { BadRequestException, Inject, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  OnModuleInit,
+} from '@nestjs/common';
 import { CreateAgentDto } from './dto/create-agent.dto';
 import { UpdateStrategyDto } from './dto/update-strategy.dto';
 import { UpdateIntervalDto } from './dto/update-interval.dto';
@@ -10,24 +15,32 @@ import { AddKnowledgeDto } from './dto/add-knowledge.dto';
 import { DrizzleAsyncProvider } from 'src/db/drizzle.provider';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from 'src/db/schema';
-import { WithdrawTokenDto } from './wallet/dto/withdraw-token.dto';
 import { and, desc, eq } from 'drizzle-orm';
 import { WalletService } from './wallet/wallet.service';
 import {
-  // COINBASE_CHAIN_ID_HEX_MAP,
   COINBASE_NETWORK_ID_MAP,
   DEFAULT_CHAIN_ID,
 } from './wallet/constants/coinbase-chain.const';
 import { AgentQueueProducer } from './agent-queue/agent-queue.producer';
+import { UpdateBulkDto } from './dto/update-bulk.dto';
+import { TradePlanner } from './trade-planner';
+import { LlmService } from 'src/llm/llm.service';
 
 @Injectable()
-export class AgentService {
+export class AgentService implements OnModuleInit {
+  private tradePlanner: TradePlanner;
+
   constructor(
     @Inject(DrizzleAsyncProvider)
     private readonly db: NodePgDatabase<typeof schema>,
     private readonly walletService: WalletService,
     private readonly agentQueueProducer: AgentQueueProducer,
+    private readonly llmService: LlmService,
   ) {}
+
+  onModuleInit() {
+    this.tradePlanner = new TradePlanner(this.walletService, this.llmService);
+  }
 
   async findAll(userId: string) {
     try {
@@ -217,12 +230,12 @@ export class AgentService {
         if (currentAgent.endDate < new Date()) {
           throw new BadRequestException('Agent end date is in the past');
         }
-        await this.agentQueueProducer.addAgentEndDtJob(
+        await this.agentQueueProducer.updateAgentEndDtJob(
           id,
           currentAgent.endDate,
         );
       }
-      await this.agentQueueProducer.addAgentExecuteJob(
+      await this.agentQueueProducer.updateAgentExecuteJob(
         id,
         currentAgent.intervalSeconds,
       );
@@ -338,17 +351,75 @@ export class AgentService {
     }
   }
 
-  async withdraw(id: string, withdrawTokenDto: WithdrawTokenDto) {
+  async delete(id: string) {
     try {
-      // TODO: Implement withdraw logic
+      const totalValueUSD = await this.walletService.getBalance(id);
+      if (totalValueUSD.balance >= 1) {
+        throw new BadRequestException('Agent balance is greater than 1 USD');
+      }
+      await this.agentQueueProducer.removeAgentEndDtJob(id);
+      await this.agentQueueProducer.removeAgentExecuteJob(id);
+      await this.db
+        .delete(schema.agentsTable)
+        .where(eq(schema.agentsTable.id, +id));
       return {
-        id,
-        withdrawTokenDto,
+        message: 'Agent deleted successfully',
       };
     } catch (error) {
-      throw new BadRequestException(
-        `Failed to withdraw tokens: ${error.message}`,
-      );
+      throw new BadRequestException(`Failed to delete agent: ${error.message}`);
     }
   }
+
+  async updateBulk(id: string, updateBulkDto: UpdateBulkDto) {
+    try {
+      await this.updateStrategy(id, { strategy: updateBulkDto.strategy });
+      await this.updateStopLoss(id, { stopLossUSD: updateBulkDto.stopLossUSD });
+      await this.updateTakeProfit(id, {
+        takeProfitUSD: updateBulkDto.takeProfitUSD,
+      });
+      await this.updateInterval(id, {
+        intervalSeconds: updateBulkDto.intervalSeconds,
+      });
+      await this.updateEndDate(id, {
+        endDate: updateBulkDto.endDate,
+      });
+    } catch (error) {
+      throw new BadRequestException(`Failed to update bulk: ${error.message}`);
+    }
+  }
+
+  async simulateTrade(id: string, strategyDescription?: string) {
+    const agent = await this.findOne(id);
+    if (!agent) {
+      throw new BadRequestException('Agent not found');
+    }
+    return await this.llmService.createTradePlan(id, strategyDescription);
+  }
+
+  async operateTrade(id: string) {
+    const agent = await this.findOne(id);
+    if (!agent) {
+      throw new BadRequestException('Agent not found');
+    }
+    const agentTradePlan = await this.llmService.createTradePlan(id);
+    const tradePlan = {
+      steps: agentTradePlan.tradeSteps,
+    };
+
+    let error: any;
+    try {
+      const trade = await this.tradePlanner.executeTradingPlan(id, tradePlan);
+      return trade;
+    } catch (e) {
+      error = e;
+    }
+
+    const reTradePlan = await this.llmService.reCreateTradePlan(id, error);
+    const reTradePlanDto = {
+      steps: reTradePlan.tradeSteps,
+    };
+    const reTrade = await this.tradePlanner.executeTradingPlan(id, reTradePlanDto);
+    return reTrade;
+  }
+
 }

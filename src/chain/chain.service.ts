@@ -26,8 +26,8 @@ export class ChainService {
           : undefined,
       }));
     } catch (e) {
-        console.error(e);
-        return [];
+      console.error(e);
+      return [];
     }
   }
 

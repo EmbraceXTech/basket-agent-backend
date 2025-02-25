@@ -7,7 +7,6 @@ import {
   Param,
   Body,
   UseGuards,
-  ValidationPipe,
 } from '@nestjs/common';
 import { AgentService } from './agent.service';
 import { CreateAgentDto } from './dto/create-agent.dto';
@@ -18,14 +17,12 @@ import { UpdateStopLossDto } from './dto/update-stop-loss.dto';
 import { UpdateTakeProfitDto } from './dto/update-take-profit.dto';
 import { UpdateTokensDto } from './dto/update-tokens.dto';
 import { AddKnowledgeDto } from './dto/add-knowledge.dto';
-import { WithdrawTokenDto } from './wallet/dto/withdraw-token.dto';
 import { AgentGuard } from '../common/guards/agent.guard';
 import { ValidateAgentOwner } from 'src/common/decorators/validate-agent-owner.decorator';
 import { ValidateUser } from 'src/common/decorators/validate-user.decorator';
 import { WalletService } from './wallet/wallet.service';
-import { FaucetDto } from './wallet/dto/faucet.dto';
-import { BuyDto } from './wallet/dto/buy.dto';
-import { SellDto } from './wallet/dto/sell.dto';
+import { UpdateBulkDto } from './dto/update-bulk.dto';
+import { SimulateTradeDto } from './dto/simulate-trade.dto';
 
 @Controller('agent')
 export class AgentController {
@@ -150,38 +147,29 @@ export class AgentController {
   }
 
   @UseGuards(AgentGuard)
-  @Get(':agentId/wallet/balance')
-  getBalance(@ValidateAgentOwner() agentId: string) {
-    return this.walletService.getBalance(agentId);
+  @Delete(':agentId')
+  deleteAgent(@ValidateAgentOwner() agentId: string) {
+    return this.agentService.delete(agentId);
   }
 
   @UseGuards(AgentGuard)
-  @Post(':agentId/wallet/withdraw')
-  withdraw(
+  @Patch(':agentId/bulk')
+  updateBulk(
     @ValidateAgentOwner() agentId: string,
-    @Body() withdrawTokenDto: WithdrawTokenDto,
+    @Body() updateBulkDto: UpdateBulkDto,
   ) {
-    return this.walletService.withdraw(agentId, withdrawTokenDto);
+    return this.agentService.updateBulk(agentId, updateBulkDto);
   }
 
   @UseGuards(AgentGuard)
-  @Post(':agentId/wallet/buy-asset')
-  buyAsset(@ValidateAgentOwner() agentId: string, @Body() buyDto: BuyDto) {
-    return this.walletService.buyAsset(agentId, buyDto);
+  @Post(':agentId/operate-trade')
+  operateTrade(@ValidateAgentOwner() agentId: string) {
+    return this.agentService.operateTrade(agentId);
   }
 
   @UseGuards(AgentGuard)
-  @Post(':agentId/wallet/sell-asset')
-  sellAsset(@ValidateAgentOwner() agentId: string, @Body() sellDto: SellDto) {
-    return this.walletService.sellAsset(agentId, sellDto);
-  }
-
-  @UseGuards(AgentGuard)
-  @Post(':agentId/wallet/faucet')
-  faucet(
-    @ValidateAgentOwner() agentId: string,
-    @Body(ValidationPipe) faucetDto: FaucetDto,
-  ) {
-    return this.walletService.faucet(agentId, faucetDto.token);
+  @Post(':agentId/simulate-trade')
+  simulateTrade(@ValidateAgentOwner() agentId: string, @Body() simulateTradeDto: SimulateTradeDto) {
+    return this.agentService.simulateTrade(agentId, simulateTradeDto.strategyDescription);
   }
 }

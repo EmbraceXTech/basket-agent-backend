@@ -28,5 +28,6 @@ services:
       - REDIS_HOST=${REDIS_HOST}
       - REDIS_PORT=${REDIS_PORT}
       - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - BASE_RPC_URL=${BASE_RPC_URL}
 
     network_mode: host
