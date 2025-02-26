@@ -165,7 +165,7 @@ export class ParaConnector {
     if (!agent || !agent.selectedTokens || agent.selectedTokens.length === 0) {
       return { nativeToken: null, erc20Tokens: [] };
     }
-
+    const usdcInfo = await this.tokenService.getBasedToken(agent.chainId);
     const selectedTokens = agent.selectedTokens.map((token) =>
       JSON.parse(token),
     ) as Array<{
@@ -181,7 +181,13 @@ export class ParaConnector {
         token.tokenAddress === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
     );
 
-    const erc20Tokens = selectedTokens.filter(
+    const erc20Tokens = [
+      ...selectedTokens,
+      {
+        tokenSymbol: usdcInfo.symbol,
+        tokenAddress: usdcInfo.address as `0x${string}`,
+      },
+    ].filter(
       (token) =>
         token.tokenSymbol.toUpperCase() !== this.nativeTokenSymbol &&
         token.tokenAddress !== '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
@@ -209,19 +215,20 @@ export class ParaConnector {
 
   private async _transferToken({
     signer,
-    tokenAddress,
+    tokenSymbol,
     to,
     amount,
     chainId,
   }: {
     signer: ethers.Signer;
-    tokenAddress: string;
+    tokenSymbol: string;
     to: string;
     amount: number;
     chainId?: string;
   }) {
     const tokenAvaiable = await this.tokenService.getAvailableTokenMap(chainId);
-    const decimals = tokenAvaiable[tokenAddress].decimals;
+    const decimals = tokenAvaiable[tokenSymbol].decimals;
+    const tokenAddress = tokenAvaiable[tokenSymbol].address;
     const contract = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
     const tx = await contract.transfer(
       to,
@@ -298,7 +305,7 @@ export class ParaConnector {
       const agent = await this.agentService.findOne(agentId);
       return this._transferToken({
         signer,
-        tokenAddress: assetId,
+        tokenSymbol: assetId,
         to: recipientAddress,
         amount,
         chainId: agent.chainId,

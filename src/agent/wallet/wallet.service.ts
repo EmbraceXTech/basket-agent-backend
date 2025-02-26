@@ -159,14 +159,14 @@ export class WalletService implements OnModuleInit {
 
   async withdraw(agentId: string, withdrawTokenDto: WithdrawTokenDto) {
     try {
-      const result = await this.cdpConnector.withdraw(
-        agentId,
-        withdrawTokenDto,
-      );
-      // const result = await this.paraConnector.withdraw(
+      // const result = await this.cdpConnector.withdraw(
       //   agentId,
       //   withdrawTokenDto,
       // );
+      const result = await this.paraConnector.withdraw(
+        agentId,
+        withdrawTokenDto,
+      );
       const transactionHash = result.getTransactionHash();
 
       const agent = await this.findAgentById(agentId);
