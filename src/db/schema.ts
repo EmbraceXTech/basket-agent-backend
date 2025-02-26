@@ -92,6 +92,7 @@ export const walletKeysTable = pgTable('wallet_keys', {
   ivString: varchar({ length: 255 }),
   encryptedWalletData: text(),
   userShare: text(),
+  walletId: varchar({ length: 255 }),
   createdAt: timestamp().notNull().defaultNow(),
 });
 

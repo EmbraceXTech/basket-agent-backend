@@ -12,6 +12,7 @@ import { PriceService } from 'src/price/price.service';
 import { TokenService } from 'src/token/token.service';
 import { AgentService } from '../agent.service';
 import { ERC20_ABI } from 'src/common/modules/ethereum/abis/erc20.abi';
+import { eq } from 'drizzle-orm/sql';
 
 export class ParaConnector {
   private paraClient: ParaServer;
@@ -32,7 +33,8 @@ export class ParaConnector {
   }
 
   private async _createParaWallet() {
-    const customIDWithRandom = 'agent-' + Math.random();
+    const randomString = Math.random().toString(36).substring(2, 15);
+    const customIDWithRandom = 'agent-' + randomString;
     try {
       const pregenWallet = await this.paraClient.createPregenWallet({
         type: WalletType.EVM,
@@ -48,6 +50,13 @@ export class ParaConnector {
     } catch (error) {
       throw new Error('Error creating pre-generated wallet: ' + error);
     }
+  }
+
+  async findWalleKeytByAgentId(agentId: string) {
+    const result = await this.db.query.walletKeysTable.findFirst({
+      where: eq(schema.walletKeysTable.agentId, +agentId),
+    });
+    return result;
   }
 
   // NOTE: not working
@@ -73,14 +82,13 @@ export class ParaConnector {
   // set user share
   private async _fetchUserShare(agentId?: string) {
     if (!this.paraClient.getUserShare()) {
-      // TODO: fetch user share from DB
-      console.log('fetching user share from DB with agentId: ', agentId);
-      const userShare = '';
+      const walletKey = await this.findWalleKeytByAgentId(agentId);
+      const userShare = walletKey.userShare;
       this.paraClient.setUserShare(userShare);
     }
   }
 
-  private async _getSigner(chainId?: string, agentId?: string) {
+  private async _getSigner(agentId?: string, chainId?: string) {
     await this._fetchUserShare(agentId);
     const rpcUrl = config.baseRpcUrl;
     const provider = new ethers.JsonRpcProvider(
