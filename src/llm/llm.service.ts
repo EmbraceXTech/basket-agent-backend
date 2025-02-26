@@ -4,7 +4,10 @@ import { ChatPromptTemplate } from '@langchain/core/prompts';
 import { JsonOutputParser } from '@langchain/core/output_parsers';
 
 import { config } from 'src/config';
-import { AgentTradePlan, TradeStep } from 'src/agent/interfaces/trade.interface';
+import {
+  AgentTradePlan,
+  TradeStep,
+} from 'src/agent/interfaces/trade.interface';
 import {
   tradePlanSystemPrompt,
   tradePlanUserMessage,
@@ -16,7 +19,10 @@ import { Token } from 'src/agent/interfaces/token.interface';
 import { AgentService } from 'src/agent/agent.service';
 import { ChainInfo } from 'src/chain/interfaces/chain-info.interface';
 import { PriceResponse } from 'src/price/interfaces/price-response.interface';
-import { reTradePlanSystemPrompt, reTradePlanUserMessage } from './constants/re-create-promptTempalte.constant';
+import {
+  reTradePlanSystemPrompt,
+  reTradePlanUserMessage,
+} from './constants/re-create-promptTempalte.constant';
 
 @Injectable()
 export class LlmService {
@@ -29,7 +35,7 @@ export class LlmService {
     private readonly agentService: AgentService,
   ) {
     this.model = new ChatOpenAI({
-      modelName: 'gpt-4o',
+      modelName: 'gpt-4o-mini',
       apiKey: config.openaiApiKey,
     });
   }
@@ -105,7 +111,8 @@ export class LlmService {
       usdcBalance,
     } = await this._fetchTradeInfo(agentId);
 
-    const strategyDescriptionPrompt = tempStrategyDescription || strategyDescription;
+    const strategyDescriptionPrompt =
+      tempStrategyDescription || strategyDescription;
 
     const parser = new JsonOutputParser<AgentTradePlan>();
     const promptTemplate = ChatPromptTemplate.fromMessages([
@@ -156,5 +163,4 @@ export class LlmService {
     });
     return result;
   }
-
 }
