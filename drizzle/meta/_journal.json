@@ -36,6 +36,13 @@
       "when": 1740586016418,
       "tag": "0004_flashy_turbo",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1740587418553,
+      "tag": "0005_cheerful_guardian",
+      "breakpoints": true
     }
   ]
 }
