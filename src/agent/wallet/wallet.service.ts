@@ -150,6 +150,25 @@ export class WalletService implements OnModuleInit {
         data,
         recalculate,
       );
+
+      // Log successful deposit
+      await this.db.insert(schema.logsTable).values({
+        agentId: +agentId,
+        logType: 'DEPOSIT',
+        content: JSON.stringify({
+          event: 'DEPOSIT_COMPLETED',
+          timestamp: new Date().toISOString(),
+          metadata: {
+            transactionHash: recordDepositDto.transactionHash,
+            amount: formattedAmount,
+            token: isNative ? 'ETH' : tokenInfo.symbol,
+            depositDate: depositDate.toISOString(),
+            walletAddress,
+          },
+          result: deposit,
+        }),
+      });
+
       return deposit;
     } catch (e) {
       console.error(e);
@@ -194,7 +213,28 @@ export class WalletService implements OnModuleInit {
         date: new Date(),
         transactionHash,
       };
-      await this.portfolioManager.createBalanceSnapshot(agentId, data);
+      const withdrawal = await this.portfolioManager.createBalanceSnapshot(
+        agentId,
+        data,
+      );
+
+      // Log successful withdrawal
+      await this.db.insert(schema.logsTable).values({
+        agentId: +agentId,
+        logType: 'WITHDRAWAL',
+        content: JSON.stringify({
+          event: 'WITHDRAWAL_COMPLETED',
+          timestamp: new Date().toISOString(),
+          metadata: {
+            transactionHash,
+            amount: formattedAmount,
+            token: isNative ? 'ETH' : 'USDC',
+            recipientAddress: withdrawTokenDto.recipientAddress,
+          },
+          result: withdrawal,
+        }),
+      });
+
       return result;
     } catch (e) {
       throw new BadRequestException(`Failed to withdraw: ${e.message}`);

@@ -51,10 +51,8 @@ export const logsTable = pgTable('logs', {
   agentId: integer()
     .notNull()
     .references(() => agentsTable.id, { onDelete: 'cascade' }),
-  thought: text().notNull(),
-  action: varchar({ length: 255 }).notNull(),
-  amount: integer().notNull(),
-  tokenAddr: varchar({ length: 255 }).notNull(),
+  logType: varchar({ length: 255 }).notNull(),
+  content: text().notNull(),
   createdAt: timestamp().notNull().defaultNow(),
 });
 
