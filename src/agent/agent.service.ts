@@ -418,8 +418,10 @@ export class AgentService implements OnModuleInit {
     const reTradePlanDto = {
       steps: reTradePlan.tradeSteps,
     };
-    const reTrade = await this.tradePlanner.executeTradingPlan(id, reTradePlanDto);
+    const reTrade = await this.tradePlanner.executeTradingPlan(
+      id,
+      reTradePlanDto,
+    );
     return reTrade;
   }
-
 }

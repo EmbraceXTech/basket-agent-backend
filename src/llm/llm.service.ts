@@ -4,10 +4,7 @@ import { ChatPromptTemplate } from '@langchain/core/prompts';
 import { JsonOutputParser } from '@langchain/core/output_parsers';
 
 import { config } from 'src/config';
-import {
-  AgentTradePlan,
-  TradeStep,
-} from 'src/agent/interfaces/trade.interface';
+import { AgentTradePlan } from 'src/agent/interfaces/trade.interface';
 import {
   tradePlanSystemPrompt,
   tradePlanUserMessage,

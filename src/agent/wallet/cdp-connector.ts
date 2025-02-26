@@ -6,10 +6,9 @@ import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from 'src/db/schema';
 import { eq } from 'drizzle-orm';
 import { COINBASE_CHAIN_ID_MAP } from './constants/coinbase-chain.const';
-import {
-  // COINBASE_ASSET_MAP,
-  // USDC_ASSET_MAP,
-} from './constants/coinbase-asset.const';
+import {} from // COINBASE_ASSET_MAP,
+// USDC_ASSET_MAP,
+'./constants/coinbase-asset.const';
 import { SellDto } from './dto/sell.dto';
 import { BuyDto } from './dto/buy.dto';
 import { PriceService } from 'src/price/price.service';
@@ -41,7 +40,10 @@ export class CdpConnector {
       const prices = await this.priceService.getPrices(
         tokenBalances.map(([asset]) => asset.toUpperCase()),
       );
-      console.log('tokenBalances: ', tokenBalances.map(([asset]) => asset.toUpperCase()));
+      console.log(
+        'tokenBalances: ',
+        tokenBalances.map(([asset]) => asset.toUpperCase()),
+      );
       console.log('prices: ', prices);
       const priceMap = new Map(prices.map((price) => [price.token, price]));
       const tokenValues = Array.from(balances).map(([asset, balance]) => {
@@ -57,7 +59,7 @@ export class CdpConnector {
             : Number(balance) * Number(price.price),
         ];
       });
-      const balance = tokenValues.reduce((acc, [asset, valueUSD]) => {
+      const balance = tokenValues.reduce((acc, [, valueUSD]) => {
         return acc + Number(valueUSD);
       }, 0);
 
@@ -133,7 +135,9 @@ export class CdpConnector {
 
   async buyAsset(agentId: string, buyDto: BuyDto) {
     const agent = await this.findAgentById(agentId);
-    const tokenMap = await this.tokenService.getAvailableTokenMap(agent.chainId);
+    const tokenMap = await this.tokenService.getAvailableTokenMap(
+      agent.chainId,
+    );
     return this.trade(
       agentId,
       tokenMap['usdc'].address,
@@ -144,7 +148,9 @@ export class CdpConnector {
 
   async sellAsset(agentId: string, sellDto: SellDto) {
     const agent = await this.findAgentById(agentId);
-    const tokenMap = await this.tokenService.getAvailableTokenMap(agent.chainId);
+    const tokenMap = await this.tokenService.getAvailableTokenMap(
+      agent.chainId,
+    );
     return this.trade(
       agentId,
       sellDto.tokenAddress,
@@ -161,7 +167,9 @@ export class CdpConnector {
   ) {
     const agent = await this.findAgentById(agentId);
     const agentWallet = await this.getCoinbaseWallet(agentId);
-    const tokenMap = await this.tokenService.getAvailableTokenMap(agent.chainId);
+    const tokenMap = await this.tokenService.getAvailableTokenMap(
+      agent.chainId,
+    );
     const inputAsset = tokenMap[inputTokenAddress.toLowerCase()];
     const outputAsset = tokenMap[outputTokenAddress.toLowerCase()];
     const trade = await agentWallet.createTrade({
@@ -187,13 +195,20 @@ export class CdpConnector {
     }
   }
 
-  public async getCoinbaseWallet(agentId: string) {
+  private async getCoinbaseWallet(agentId: string) {
+    const agentWalletInfo = await this.findByAgentId(agentId);
+    const { ivString, encryptedWalletData } = agentWalletInfo;
+    const iv = Buffer.from(ivString, 'hex');
+    const walletData = JSON.parse(this.decrypt(encryptedWalletData, iv));
+    return Wallet.import(walletData);
+  }
+
+  public async getWalletAddress(agentId: string) {
     try {
-      const agentWalletInfo = await this.findByAgentId(agentId);
-      const { ivString, encryptedWalletData } = agentWalletInfo;
-      const iv = Buffer.from(ivString, 'hex');
-      const walletData = JSON.parse(this.decrypt(encryptedWalletData, iv));
-      return Wallet.import(walletData);
+      const wallet = await this.getCoinbaseWallet(agentId);
+      const walletAddress = await wallet.getDefaultAddress();
+      const walletId = walletAddress.getId();
+      return walletId;
     } catch (e) {
       throw e;
     }

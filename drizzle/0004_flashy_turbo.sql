@@ -1,0 +1,1 @@
+ALTER TABLE "wallet_keys" ADD COLUMN "walletId" varchar(255);

@@ -20,9 +20,9 @@ import { LlmModule } from 'src/llm/llm.module';
 
 @Module({
   imports: [
-    WalletModule,
     PriceModule,
     forwardRef(() => LlmModule),
+    forwardRef(() => WalletModule),
     BullModule.registerQueue({
       name: AGENT_EXECUTE_QUEUE,
     }),

@@ -4,7 +4,7 @@ import {
   Get,
   Post,
   UseGuards,
-  ValidationPipe,
+  // ValidationPipe,
 } from '@nestjs/common';
 import { ValidateAgentOwner } from 'src/common/decorators/validate-agent-owner.decorator';
 import { AgentGuard } from 'src/common/guards/agent.guard';
@@ -12,7 +12,7 @@ import { WalletService } from './wallet.service';
 import { WithdrawTokenDto } from './dto/withdraw-token.dto';
 import { BuyDto } from './dto/buy.dto';
 import { SellDto } from './dto/sell.dto';
-import { FaucetDto } from './dto/faucet.dto';
+// import { FaucetDto } from './dto/faucet.dto';
 import { RecordDepositDto } from './dto/record-deposit.dto';
 
 @Controller('agent/:agentId/wallet')
@@ -67,14 +67,12 @@ export class WalletController {
     return this.walletService.sellAsset(agentId, sellDto);
   }
 
-  @UseGuards(AgentGuard)
-  @Post('faucet')
-  faucet(
-    @ValidateAgentOwner() agentId: string,
-    @Body(ValidationPipe) faucetDto: FaucetDto,
-  ) {
-    return this.walletService.faucet(agentId, faucetDto.token);
-  }
-
-
+  // @UseGuards(AgentGuard)
+  // @Post('faucet')
+  // faucet(
+  //   @ValidateAgentOwner() agentId: string,
+  //   @Body(ValidationPipe) faucetDto: FaucetDto,
+  // ) {
+  //   return this.walletService.faucet(agentId, faucetDto.token);
+  // }
 }

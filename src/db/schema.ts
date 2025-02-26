@@ -1,7 +1,6 @@
 import {
   boolean,
   integer,
-  numeric,
   doublePrecision,
   pgTable,
   text,
@@ -90,8 +89,10 @@ export const walletKeysTable = pgTable('wallet_keys', {
     .notNull()
     .unique(),
   address: varchar({ length: 255 }).notNull().unique(),
-  ivString: varchar({ length: 255 }).notNull(),
-  encryptedWalletData: text().notNull(),
+  ivString: varchar({ length: 255 }),
+  encryptedWalletData: text(),
+  userShare: text(),
+  walletId: varchar({ length: 255 }),
   createdAt: timestamp().notNull().defaultNow(),
 });
 
@@ -119,9 +120,12 @@ export const balanceSnapshotsTable = pgTable('balance_snapshots', {
   createdAt: timestamp().notNull().defaultNow(),
 });
 
-export const balanceSnapshotsRelations = relations(balanceSnapshotsTable, ({ one }) => ({
-  agent: one(agentsTable, {
-    fields: [balanceSnapshotsTable.agentId],
-    references: [agentsTable.id],
+export const balanceSnapshotsRelations = relations(
+  balanceSnapshotsTable,
+  ({ one }) => ({
+    agent: one(agentsTable, {
+      fields: [balanceSnapshotsTable.agentId],
+      references: [agentsTable.id],
+    }),
   }),
-}));
+);
