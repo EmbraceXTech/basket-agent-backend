@@ -107,9 +107,9 @@ export class TradePlanner {
 
   async executeTradingPlan(id: string, plan: TradePlanDto) {
     try {
-      let result: (Trade | null)[] = [];
+      const result: (Trade | null)[] = [];
       for (const step of plan.steps) {
-        const { type, data, reason } = step;
+        const { type, data } = step;
         if (type === 'hold') {
           result.push(null);
         } else if (type === 'buy') {

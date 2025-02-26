@@ -80,6 +80,7 @@ export class AgentService implements OnModuleInit {
 
         await tx.insert(schema.walletKeysTable).values({
           ...agentWallet,
+          address: agentWallet.walletAddress,
           agentId: agent[0].id,
         });
 
@@ -418,8 +419,10 @@ export class AgentService implements OnModuleInit {
     const reTradePlanDto = {
       steps: reTradePlan.tradeSteps,
     };
-    const reTrade = await this.tradePlanner.executeTradingPlan(id, reTradePlanDto);
+    const reTrade = await this.tradePlanner.executeTradingPlan(
+      id,
+      reTradePlanDto,
+    );
     return reTrade;
   }
-
 }

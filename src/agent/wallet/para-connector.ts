@@ -12,9 +12,8 @@ import { PriceService } from 'src/price/price.service';
 import { TokenService } from 'src/token/token.service';
 import { AgentService } from '../agent.service';
 import { ERC20_ABI } from 'src/common/modules/ethereum/abis/erc20.abi';
-import { BaseConnector } from './base-connector';
 
-export class ParaConnector extends BaseConnector {
+export class ParaConnector {
   private paraClient: ParaServer;
   private baseTokenSymbol = 'USDC';
   private nativeTokenSymbol = 'ETH';
@@ -24,7 +23,6 @@ export class ParaConnector extends BaseConnector {
     private tokenService: TokenService,
     private agentService: AgentService,
   ) {
-    super();
     this.paraClient = new ParaServer(Environment.BETA, config.paraApiKey);
   }
 
