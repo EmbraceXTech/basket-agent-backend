@@ -11,6 +11,8 @@ import { TokenModule } from './token/token.module';
 import { BullModule } from '@nestjs/bullmq';
 import { config } from './config';
 import { LlmModule } from './llm/llm.module';
+import { ExpressAdapter } from '@bull-board/express';
+import { BullBoardModule } from '@bull-board/nestjs';
 
 @Module({
   imports: [
@@ -28,6 +30,10 @@ import { LlmModule } from './llm/llm.module';
         port: config.redisPort,
         password: config.redisPassword,
       },
+    }),
+    BullBoardModule.forRoot({
+      route: '/queues',
+      adapter: ExpressAdapter,
     }),
   ],
   providers: [
