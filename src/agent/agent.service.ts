@@ -80,7 +80,6 @@ export class AgentService implements OnModuleInit {
 
         await tx.insert(schema.walletKeysTable).values({
           ...agentWallet,
-          address: agentWallet.walletAddress,
           agentId: agent[0].id,
         });
 

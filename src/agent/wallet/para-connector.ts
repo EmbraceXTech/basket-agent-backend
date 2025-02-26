@@ -41,7 +41,7 @@ export class ParaConnector {
       });
       const userShare = this.paraClient.getUserShare();
       return {
-        walletAddress: pregenWallet.address,
+        address: pregenWallet.address,
         userShare,
         walletId: pregenWallet.id,
       };
