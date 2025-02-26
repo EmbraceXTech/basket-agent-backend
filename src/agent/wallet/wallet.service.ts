@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  forwardRef,
   Inject,
   Injectable,
   OnModuleInit,
@@ -20,10 +21,13 @@ import { config } from 'src/config';
 import { NATIVE_TOKEN_ADDRESS } from 'src/constant/eth.constant';
 import { TokenService } from 'src/token/token.service';
 import { BalanceSnapshotInput } from './interfaces/balance-snapshot.interface';
+import { ParaConnector } from './para-connector';
+import { AgentService } from '../agent.service';
 
 @Injectable()
 export class WalletService implements OnModuleInit {
   private cdpConnector: CdpConnector;
+  private paraConnector: ParaConnector;
   private portfolioManager: PortfolioManager;
   private ethConnector: EthConnector;
 
@@ -32,23 +36,36 @@ export class WalletService implements OnModuleInit {
     private readonly db: NodePgDatabase<typeof schema>,
     private priceService: PriceService,
     private tokenService: TokenService,
+    @Inject(forwardRef(() => AgentService))
+    private agentService: AgentService,
   ) {}
 
   onModuleInit() {
-    this.cdpConnector = new CdpConnector(this.db, this.priceService, this.tokenService);
+    this.cdpConnector = new CdpConnector(
+      this.db,
+      this.priceService,
+      this.tokenService,
+    );
+    this.paraConnector = new ParaConnector(
+      this.db,
+      this.priceService,
+      this.tokenService,
+      this.agentService,
+    );
     this.portfolioManager = new PortfolioManager(this.db);
     this.ethConnector = new EthConnector();
   }
 
   async createAgentWallet(chainIdHex: string) {
     return this.cdpConnector.createAgentWallet(chainIdHex);
+    // return this.paraConnector.createAgentWallet(chainIdHex);
   }
 
   async getBalance(agentId: string) {
     const walletBalance = await this.cdpConnector.getBalance(agentId);
-    const balanceSnapshot = await this.portfolioManager.getLastSnapshot(
-      agentId,
-    );
+    // const walletBalance = await this.paraConnector.getBalance(agentId);
+    const balanceSnapshot =
+      await this.portfolioManager.getLastSnapshot(agentId);
     return {
       ...walletBalance,
       equity: balanceSnapshot ? balanceSnapshot.equity : 0,
@@ -77,16 +94,14 @@ export class WalletService implements OnModuleInit {
   async recordDeposit(agentId: string, recordDepositDto: RecordDepositDto) {
     try {
       const agent = await this.findAgentById(agentId);
-      const walletInfo = await this.cdpConnector.getCoinbaseWallet(agentId);
       const balanceInfo = await this.getBalance(agentId);
       const history = await this.ethConnector.getTransferHistory(
         config.baseRpcUrl,
         recordDepositDto.transactionHash,
       );
 
-      const walletAddress = await walletInfo
-        .getDefaultAddress()
-        .then((res) => res.getId());
+      const walletAddress = await this.cdpConnector.getWalletAddress(agentId);
+      // const walletAddress = await this.paraConnector.getWalletAddress(agentId);
       if (history.toAddress.toLowerCase() !== walletAddress.toLowerCase()) {
         throw new BadRequestException(
           `Deposit destination address does not match agent wallet`,
@@ -117,10 +132,8 @@ export class WalletService implements OnModuleInit {
           ['ETH'],
           agent.chainId,
         );
-        const price = priceResults.find(
-          (price) => price.token === 'ETH',
-        );
-        formattedAmount = price.price * Number(amount) / 10 ** 18;
+        const price = priceResults.find((price) => price.token === 'ETH');
+        formattedAmount = (price.price * Number(amount)) / 10 ** 18;
       }
 
       const depositDate = new Date(history.timestamp);
@@ -150,6 +163,10 @@ export class WalletService implements OnModuleInit {
         agentId,
         withdrawTokenDto,
       );
+      // const result = await this.paraConnector.withdraw(
+      //   agentId,
+      //   withdrawTokenDto,
+      // );
       const transactionHash = result.getTransactionHash();
 
       const agent = await this.findAgentById(agentId);
@@ -200,15 +217,20 @@ export class WalletService implements OnModuleInit {
     }
   }
 
+  // TODO: handle when para connector is ready
   async buyAsset(agentId: string, buyDto: BuyDto) {
     return this.cdpConnector.buyAsset(agentId, buyDto);
+    // return this.paraConnector.buyAsset(agentId, buyDto);
   }
 
+  // TODO: handle when para connector is ready
   async sellAsset(agentId: string, sellDto: SellDto) {
     return this.cdpConnector.sellAsset(agentId, sellDto);
+    // return this.paraConnector.sellAsset(agentId, sellDto);
   }
 
   async faucet(agentId: string, token: string) {
     return this.cdpConnector.faucet(agentId, token);
+    // return this.paraConnector.faucet(agentId, token);
   }
 }

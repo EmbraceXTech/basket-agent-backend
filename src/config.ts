@@ -27,4 +27,5 @@ export const config = {
   redisPassword: process.env.REDIS_PASSWORD || '',
   openaiApiKey: process.env.OPENAI_API_KEY || '',
   baseRpcUrl: process.env.BASE_RPC_URL || '',
+  paraApiKey: process.env.PARA_API_KEY || '',
 };
