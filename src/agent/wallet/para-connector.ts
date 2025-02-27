@@ -350,7 +350,7 @@ export class ParaConnector {
     ]);
     const outputTokenPrice = outputTokenPriceRes.price;
     const inputAmount = buyDto.usdAmount;
-    const outputAmount = inputAmount * outputTokenPrice;
+    const outputAmount = inputAmount / outputTokenPrice;
 
     const parsedInputAmount = parseUnits(inputAmount.toFixed(usdcTokenInfo.decimals), usdcTokenInfo.decimals);
     const parsedOutputAmount = parseUnits(outputAmount.toFixed(outputTokenInfo.decimals), outputTokenInfo.decimals);
