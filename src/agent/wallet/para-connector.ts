@@ -384,6 +384,6 @@ export class ParaConnector {
     } catch (error) {
       // console.error(error);
     }
-    await this.agentService.forceDelete(agentId);
+    await this.agentService.delete(agentId, false);
   }
 }

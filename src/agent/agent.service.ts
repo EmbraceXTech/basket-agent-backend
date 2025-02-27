@@ -356,27 +356,14 @@ export class AgentService implements OnModuleInit {
     }
   }
 
-  async delete(id: string) {
+  async delete(id: string, isCheckBalance = true) {
     try {
-      const totalValueUSD = await this.walletService.getBalance(id);
-      if (totalValueUSD.balance >= 1) {
-        throw new BadRequestException('Agent balance is greater than 1 USD');
+      if (isCheckBalance) {
+        const totalValueUSD = await this.walletService.getBalance(id);
+        if (totalValueUSD.balance >= 1) {
+          throw new BadRequestException('Agent balance is greater than 1 USD');
+        }
       }
-      await this.agentQueueProducer.removeAgentEndDtJob(id);
-      await this.agentQueueProducer.removeAgentExecuteJob(id);
-      await this.db
-        .delete(schema.agentsTable)
-        .where(eq(schema.agentsTable.id, +id));
-      return {
-        message: 'Agent deleted successfully',
-      };
-    } catch (error) {
-      throw new BadRequestException(`Failed to delete agent: ${error.message}`);
-    }
-  }
-
-  async forceDelete(id: string) {
-    try {
       await this.agentQueueProducer.removeAgentEndDtJob(id);
       await this.agentQueueProducer.removeAgentExecuteJob(id);
       await this.db
