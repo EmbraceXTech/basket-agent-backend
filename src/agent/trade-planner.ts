@@ -95,17 +95,17 @@ export class TradePlanner {
 
   async executeTradingPlan(id: string, plan: TradePlanDto) {
     try {
-      const result: (Trade | any | null)[] = [];
+      const result: (string | null)[] = [];
       for (const step of plan.steps) {
         const { type, data } = step;
         if (type === 'hold') {
           result.push(null);
         } else if (type === 'buy') {
-          const trade = await this.walletService.buyAsset(id, data as BuyDto);
-          result.push(trade);
+          const txHash = await this.walletService.buyAsset(id, data as BuyDto);
+          result.push(txHash);
         } else if (type === 'sell') {
-          const trade = await this.walletService.sellAsset(id, data as SellDto);
-          result.push(trade);
+          const txHash = await this.walletService.sellAsset(id, data as SellDto);
+          result.push(txHash);
         }
       }
       return result;

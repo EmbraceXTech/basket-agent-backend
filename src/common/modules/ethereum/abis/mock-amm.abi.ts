@@ -1,4 +1,4 @@
-const MOCK_AMM_ABI = [
+export const MOCK_AMM_ABI = [
   {
     inputs: [],
     stateMutability: 'nonpayable',

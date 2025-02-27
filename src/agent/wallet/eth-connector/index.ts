@@ -77,7 +77,9 @@ export class EthConnector {
     );
 
     const networkId = await this.getNetworkId(rpcUrl);
-    const tokenMap = await this.tokenService.getAvailableTokenMap(networkId.toString());
+    const tokenMap = await this.tokenService.getAvailableTokenMap(
+      networkId.toString(),
+    );
 
     const calls = balanceParams.map((param) => {
       if (param.token === 'ETH') {

@@ -3,7 +3,7 @@ import ParaServer, {
   OAuthMethod,
   WalletType,
 } from '@getpara/server-sdk';
-import { ethers } from 'ethers';
+import { ethers, parseUnits } from 'ethers';
 import { ParaEthersSigner } from '@getpara/ethers-v6-integration';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
@@ -20,6 +20,7 @@ import { eq } from 'drizzle-orm/sql';
 import ClaimPregensDto from './dto/claim.dto';
 import { ChainService } from 'src/chain/chain.service';
 import { EthConnector } from './eth-connector';
+import { MOCK_AMM_ABI } from 'src/common/modules/ethereum/abis/mock-amm.abi';
 
 export class ParaConnector {
   private paraClient: ParaServer;
@@ -333,38 +334,84 @@ export class ParaConnector {
     }
   }
 
-  // TODO: implement
   async buyAsset(agentId: string, buyDto: BuyDto) {
-    // const { tokenAddress, usdAmount } = buyDto;
+    const signer = await this._getSigner(agentId);
     const agent = await this.agentService.findOne(agentId);
     const tokenMap = await this.tokenService.getAvailableTokenMap(
       agent.chainId,
     );
-    // swap usdc to token
-    return;
-    // return this.trade(
-    //   agentId,
-    //   tokenMap['usdc'].address,
-    //   buyDto.tokenAddress,
-    //   buyDto.usdAmount,
-    // );
+    const ammAddress = await this.chainService.getAmmAddress(Number(agent.chainId));
+
+    const usdcTokenInfo = tokenMap['usdc'];
+    const outputTokenInfo = tokenMap[buyDto.tokenAddress.toLowerCase()];
+
+    const [outputTokenPriceRes] = await this.priceService.getPrices([
+      outputTokenInfo.symbol.toUpperCase(),
+    ]);
+    const outputTokenPrice = outputTokenPriceRes.price;
+    const inputAmount = buyDto.usdAmount;
+    const outputAmount = inputAmount * outputTokenPrice;
+
+    const parsedInputAmount = parseUnits(inputAmount.toFixed(usdcTokenInfo.decimals), usdcTokenInfo.decimals);
+    const parsedOutputAmount = parseUnits(outputAmount.toFixed(outputTokenInfo.decimals), outputTokenInfo.decimals);
+
+    const usdcContract = new ethers.Contract(usdcTokenInfo.address, ERC20_ABI, signer);
+    const allowance = await usdcContract.allowance(agent.walletKey.address, ammAddress);
+
+    if (allowance < parsedInputAmount) {
+      const tx = await usdcContract.approve(ammAddress, ethers.MaxUint256);
+      await tx.wait();
+    }
+
+    const contract = new ethers.Contract(ammAddress, MOCK_AMM_ABI, signer);
+    const tx = await contract.swap(
+      usdcTokenInfo.address,
+      outputTokenInfo.address,
+      parsedInputAmount,
+      parsedOutputAmount,
+    );
+    const receipt = await tx.wait();
+    return receipt.hash as string;
   }
 
-  // TODO: implement
   async sellAsset(agentId: string, sellDto: SellDto) {
-    const { tokenAddress, tokenAmount } = sellDto;
+    const signer = await this._getSigner(agentId);
     const agent = await this.agentService.findOne(agentId);
     const tokenMap = await this.tokenService.getAvailableTokenMap(
       agent.chainId,
     );
-    // swap token to usdc
-    return;
-    // return this.trade(
-    //   agentId,
-    //   sellDto.tokenAddress,
-    //   tokenMap['usdc'].address,
-    //   sellDto.tokenAmount,
-    // );
+    const ammAddress = await this.chainService.getAmmAddress(Number(agent.chainId));
+
+    const inputTokenInfo = tokenMap[sellDto.tokenAddress.toLowerCase()];
+    const usdcTokenInfo = tokenMap['usdc'];
+
+    const [inputTokenPriceRes] = await this.priceService.getPrices([
+      inputTokenInfo.symbol.toUpperCase(),
+    ]);
+    const inputTokenPrice = inputTokenPriceRes.price;
+    const inputAmount = sellDto.tokenAmount;
+    const outputAmount = inputAmount / inputTokenPrice;
+
+    const parsedInputAmount = parseUnits(inputAmount.toFixed(inputTokenInfo.decimals), inputTokenInfo.decimals);
+    const parsedOutputAmount = parseUnits(outputAmount.toFixed(usdcTokenInfo.decimals), usdcTokenInfo.decimals);
+
+    const inputTokenContract = new ethers.Contract(inputTokenInfo.address, ERC20_ABI, signer);
+    const allowance = await inputTokenContract.allowance(agent.walletKey.address, ammAddress);
+
+    if (allowance < parsedInputAmount) {
+      const tx = await inputTokenContract.approve(ammAddress, ethers.MaxUint256);
+      await tx.wait();
+    }
+
+    const contract = new ethers.Contract(ammAddress, MOCK_AMM_ABI, signer);
+    const tx = await contract.swap(
+      inputTokenInfo.address,
+      usdcTokenInfo.address,
+      parsedInputAmount,
+      parsedOutputAmount,
+    );
+    const receipt = await tx.wait();
+    return receipt.hash as string;
   }
 
   async getWalletAddress(agentId: string) {

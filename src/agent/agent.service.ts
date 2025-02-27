@@ -425,7 +425,7 @@ export class AgentService implements OnModuleInit {
       };
 
       try {
-        const trade = await this.tradePlanner.executeTradingPlan(id, tradePlan);
+        const txHashes = await this.tradePlanner.executeTradingPlan(id, tradePlan);
 
         // Log successful trade execution
         await this.db.insert(schema.logsTable).values({
@@ -434,11 +434,15 @@ export class AgentService implements OnModuleInit {
           content: JSON.stringify({
             event: 'TRADE_EXECUTED',
             timestamp: new Date().toISOString(),
-            result: trade,
+            result: tradePlan.steps.map((step, index) => ({
+              type: step.type,
+              data: step.data,
+              txHash: txHashes[index],
+            })),
           }),
         });
 
-        return trade;
+        return txHashes;
       } catch (executionError) {
         // Log execution error
         await this.db.insert(schema.logsTable).values({
@@ -455,53 +459,6 @@ export class AgentService implements OnModuleInit {
           }),
         });
 
-        // Log retry attempt
-        await this.db.insert(schema.logsTable).values({
-          agentId: +id,
-          logType: 'TRADE_RETRY',
-          content: JSON.stringify({
-            event: 'TRADE_RETRY_STARTED',
-            timestamp: new Date().toISOString(),
-            previousError: executionError.message,
-          }),
-        });
-
-        const reTradePlan = await this.llmService.reCreateTradePlan(
-          id,
-          executionError,
-        );
-        const reTradePlanDto = {
-          steps: reTradePlan.tradeSteps,
-        };
-
-        // Log retry trade plan
-        await this.db.insert(schema.logsTable).values({
-          agentId: +id,
-          logType: 'TRADE_PLAN',
-          content: JSON.stringify({
-            event: 'RETRY_TRADE_PLAN_CREATED',
-            timestamp: new Date().toISOString(),
-            plan: reTradePlan,
-          }),
-        });
-
-        const reTrade = await this.tradePlanner.executeTradingPlan(
-          id,
-          reTradePlanDto,
-        );
-
-        // Log successful retry execution
-        await this.db.insert(schema.logsTable).values({
-          agentId: +id,
-          logType: 'TRADE_EXECUTION',
-          content: JSON.stringify({
-            event: 'RETRY_TRADE_EXECUTED',
-            timestamp: new Date().toISOString(),
-            result: reTrade,
-          }),
-        });
-
-        return reTrade;
       }
     } catch (error) {
       // Log critical error
