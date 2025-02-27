@@ -43834,6 +43834,7 @@
     "infoURL": "https://sepolia.otterscan.io",
     "shortName": "sep",
     "chainId": 11155111,
+    "icon": "ethereum",
     "networkId": 11155111,
     "slip44": 1,
     "explorers": [
