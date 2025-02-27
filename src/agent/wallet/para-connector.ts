@@ -1,4 +1,8 @@
-import ParaServer, { Environment, WalletType } from '@getpara/server-sdk';
+import ParaServer, {
+  Environment,
+  OAuthMethod,
+  WalletType,
+} from '@getpara/server-sdk';
 import { ethers } from 'ethers';
 import { ParaEthersSigner } from '@getpara/ethers-v6-integration';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
@@ -366,19 +370,34 @@ export class ParaConnector {
     return { agentId, token };
   }
 
-  async claimPregenWallet(agentId: string, { email, userId }: ClaimPregensDto) {
+  async claimPregenWallet(
+    agentId: string,
+    { identifier, identifierType, userId }: ClaimPregensDto,
+  ) {
     await this.paraClient.setUserId(userId);
     const wallet = await this.findWalleKeytByAgentId(agentId);
     await this.paraClient.updatePregenWalletIdentifier({
       walletId: wallet.walletId,
-      newPregenIdentifier: email,
-      newPregenIdentifierType: 'EMAIL',
+      newPregenIdentifier: identifier,
+      newPregenIdentifierType: identifierType as
+        | 'EMAIL'
+        | 'PHONE'
+        | 'CUSTOM_ID'
+        | OAuthMethod.TWITTER
+        | OAuthMethod.DISCORD
+        | OAuthMethod.TELEGRAM,
     });
 
     try {
       await this.paraClient.claimPregenWallets({
-        pregenIdentifier: email,
-        pregenIdentifierType: 'EMAIL',
+        pregenIdentifier: identifier,
+        pregenIdentifierType: identifierType as
+          | 'EMAIL'
+          | 'PHONE'
+          | 'CUSTOM_ID'
+          | OAuthMethod.TWITTER
+          | OAuthMethod.DISCORD
+          | OAuthMethod.TELEGRAM,
       });
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
