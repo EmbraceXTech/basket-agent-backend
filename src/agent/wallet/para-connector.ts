@@ -14,6 +14,8 @@ import { AgentService } from '../agent.service';
 import { ERC20_ABI } from 'src/common/modules/ethereum/abis/erc20.abi';
 import { eq } from 'drizzle-orm/sql';
 import ClaimPregensDto from './dto/claim.dto';
+import { ChainService } from 'src/chain/chain.service';
+import { EthConnector } from './eth-connector';
 
 export class ParaConnector {
   private paraClient: ParaServer;
@@ -24,12 +26,14 @@ export class ParaConnector {
     private priceService: PriceService,
     private tokenService: TokenService,
     private agentService: AgentService,
+    private chainService: ChainService,
+    private ethConnector: EthConnector,
   ) {
     this.paraClient = new ParaServer(Environment.BETA, config.paraApiKey);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async createAgentWallet(chainIdHex?: string) {
+  async createAgentWallet(chainId?: string) {
     return this._createParaWallet();
   }
 
@@ -89,10 +93,12 @@ export class ParaConnector {
 
   private async _getSigner(agentId?: string) {
     await this._fetchUserShare(agentId);
-    const rpcUrl = config.baseRpcUrl;
-    const provider = new ethers.JsonRpcProvider(
-      rpcUrl ?? 'https://ethereum-sepolia-rpc.publicnode.com',
+    const agent = await this.agentService.findOne(agentId);
+    const chainInfo = await this.chainService.getChainInfo(
+      Number(agent.chainId),
     );
+    const [rpcUrl] = chainInfo.rpc;
+    const provider = new ethers.JsonRpcProvider(rpcUrl);
     const walletId = (await this.findWalleKeytByAgentId(agentId)).walletId;
     const ethersSigner = new ParaEthersSigner(
       this.paraClient as any,

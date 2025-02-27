@@ -17,14 +17,11 @@ import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from 'src/db/schema';
 import { and, desc, eq } from 'drizzle-orm';
 import { WalletService } from './wallet/wallet.service';
-import {
-  COINBASE_NETWORK_ID_MAP,
-  DEFAULT_CHAIN_ID,
-} from './wallet/constants/coinbase-chain.const';
 import { AgentQueueProducer } from './agent-queue/agent-queue.producer';
 import { UpdateBulkDto } from './dto/update-bulk.dto';
 import { TradePlanner } from './trade-planner';
 import { LlmService } from 'src/llm/llm.service';
+import { ChainService } from 'src/chain/chain.service';
 
 @Injectable()
 export class AgentService implements OnModuleInit {
@@ -33,6 +30,7 @@ export class AgentService implements OnModuleInit {
   constructor(
     @Inject(DrizzleAsyncProvider)
     private readonly db: NodePgDatabase<typeof schema>,
+    private readonly chainService: ChainService,
     private readonly walletService: WalletService,
     private readonly agentQueueProducer: AgentQueueProducer,
     private readonly llmService: LlmService,
@@ -55,13 +53,13 @@ export class AgentService implements OnModuleInit {
 
   async create(userId: string, createAgentDto: CreateAgentDto) {
     try {
-      // TODO: to sepolia
-      // const chainInfo =
-      //   COINBASE_NETWORK_ID_MAP[createAgentDto.chainId] || DEFAULT_CHAIN_ID;
-      const chainInfo = {
-        chainId: '11155111',
-        chainIdHex: '0x2a2a2a',
-      };
+      const chainInfo = await this.chainService.getChainInfo(
+        Number(createAgentDto.chainId),
+      );
+
+      if (!chainInfo) {
+        throw new BadRequestException('Chain not found');
+      }
 
       const transaction = await this.db.transaction(async (tx) => {
         const agent = await tx
@@ -75,12 +73,12 @@ export class AgentService implements OnModuleInit {
             endDate: createAgentDto.endDate
               ? new Date(createAgentDto.endDate)
               : null,
-            chainId: chainInfo.chainId,
+            chainId: chainInfo.chainId.toString(),
           } as typeof schema.agentsTable.$inferInsert)
           .returning();
 
         const agentWallet = await this.walletService.createAgentWallet(
-          chainInfo.chainId,
+          chainInfo.chainId.toString(),
         );
 
         await tx.insert(schema.walletKeysTable).values({

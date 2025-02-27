@@ -25,8 +25,7 @@ export class TokenService {
   }
 
   async getAvailableTokens(
-    chainId: number | string,
-    includeTokenBase?: boolean,
+    chainId: number | string
   ): Promise<TokenInfo[]> {
     const isChainAvailable = config.availableChainIds.includes(
       chainId.toString(),
@@ -36,20 +35,11 @@ export class TokenService {
     }
 
     const tokenList = await this.readTokenList(chainId);
-    const tokens = Object.values(tokenList).filter((token) =>
-      config.availableTokens.includes(token.symbol),
-    );
-
-    if (includeTokenBase) {
-      const basedToken = await this.getBasedToken(chainId);
-      tokens.push(basedToken);
-    }
-
-    return tokens;
+    return Object.values(tokenList);
   }
 
   async getAvailableTokenMap(chainId: number | string): Promise<TokenInfoMap> {
-    const tokens = await this.getAvailableTokens(chainId, true);
+    const tokens = await this.getAvailableTokens(chainId);
     const tokenAddressMap = Object.fromEntries(
       tokens.map((token) => [token.address.toLowerCase(), token]),
     );

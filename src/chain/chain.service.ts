@@ -31,6 +31,20 @@ export class ChainService {
     }
   }
 
+  async readMulticallAddress(): Promise<Record<string, string>> {
+    const filePath = join(
+      __dirname,
+      '..',
+      '..',
+      '..',
+      'data',
+      'chains',
+      'multicall.json',
+    );
+    const data = await fs.readFile(filePath, 'utf8');
+    return JSON.parse(data);
+  }
+
   async getAvailableChains(): Promise<ChainInfo[]> {
     const chainList = await this.readChainList();
     return chainList.filter((chain: ChainInfo) =>
@@ -41,5 +55,10 @@ export class ChainService {
   async getChainInfo(chainId: number): Promise<ChainInfo> {
     const chainList = await this.getAvailableChains();
     return chainList.find((chain: ChainInfo) => chain.chainId === chainId);
+  }
+
+  async getMulticallAddress(chainId: number): Promise<string> {
+    const multicallAddress = await this.readMulticallAddress();
+    return multicallAddress[chainId.toString()];
   }
 }
