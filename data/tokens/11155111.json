@@ -1,0 +1,28 @@
+{
+  "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee": {
+    "address": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "symbol": "ETH",
+    "decimals": 18,
+    "name": "Ether",
+    "logoURI": "https://tokens.1inch.io/0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee.png",
+    "eip2612": false,
+    "tags": ["crosschain", "GROUP:ETH", "native", "PEG:ETH"]
+  },
+  "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238": {
+    "address": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+    "symbol": "USDC",
+    "decimals": 6,
+    "name": "USD Coin",
+    "logoURI": "https://tokens.1inch.io/0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.png",
+    "eip2612": false,
+    "tags": ["crosschain", "GROUP:USDC", "native", "PEG:USD"]
+  },
+  "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984": {
+    "address": "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+    "symbol": "UNI",
+    "decimals": 18,
+    "name": "Uniswap",
+    "logoURI": "ipfs://QmXttGpZrECX5qCyXbBQiqgQNytVGeZW5Anewvh2jc4psg",
+    "tags": ["crosschain", "GROUP:UNI", "native", "PEG:ETH"]
+  }
+}

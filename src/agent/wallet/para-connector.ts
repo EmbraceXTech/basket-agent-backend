@@ -81,20 +81,23 @@ export class ParaConnector {
 
   // set user share
   private async _fetchUserShare(agentId?: string) {
-    if (!this.paraClient.getUserShare()) {
-      const walletKey = await this.findWalleKeytByAgentId(agentId);
-      const userShare = walletKey.userShare;
-      this.paraClient.setUserShare(userShare);
-    }
+    const walletKey = await this.findWalleKeytByAgentId(agentId);
+    const userShare = walletKey.userShare;
+    this.paraClient.setUserShare(userShare);
   }
 
-  private async _getSigner(agentId?: string, chainId?: string) {
+  private async _getSigner(agentId?: string) {
     await this._fetchUserShare(agentId);
     const rpcUrl = config.baseRpcUrl;
     const provider = new ethers.JsonRpcProvider(
       rpcUrl ?? 'https://ethereum-sepolia-rpc.publicnode.com',
     );
-    const ethersSigner = new ParaEthersSigner(this.paraClient as any, provider);
+    const walletId = (await this.findWalleKeytByAgentId(agentId)).walletId;
+    const ethersSigner = new ParaEthersSigner(
+      this.paraClient as any,
+      provider,
+      walletId,
+    );
     return ethersSigner;
   }
 
@@ -300,16 +303,22 @@ export class ParaConnector {
     const { assetId, amount, recipientAddress } = withdrawTokenDto;
     const signer = await this._getSigner(agentId);
     if (assetId === 'eth') {
-      return this._transferEther({ signer, amount, to: recipientAddress });
+      const receipt = await this._transferEther({
+        signer,
+        amount,
+        to: recipientAddress,
+      });
+      return receipt.hash;
     } else if (assetId === 'usdc') {
       const agent = await this.agentService.findOne(agentId);
-      return this._transferToken({
+      const receipt = await this._transferToken({
         signer,
         tokenSymbol: assetId,
         to: recipientAddress,
         amount,
         chainId: agent.chainId,
       });
+      return receipt.hash;
     }
   }
 

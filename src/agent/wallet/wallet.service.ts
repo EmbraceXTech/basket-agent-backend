@@ -57,13 +57,13 @@ export class WalletService implements OnModuleInit {
   }
 
   async createAgentWallet(chainIdHex: string) {
-    return this.cdpConnector.createAgentWallet(chainIdHex);
-    // return this.paraConnector.createAgentWallet(chainIdHex);
+    // return this.cdpConnector.createAgentWallet(chainIdHex);
+    return this.paraConnector.createAgentWallet(chainIdHex);
   }
 
   async getBalance(agentId: string) {
-    const walletBalance = await this.cdpConnector.getBalance(agentId);
-    // const walletBalance = await this.paraConnector.getBalance(agentId);
+    // const walletBalance = await this.cdpConnector.getBalance(agentId);
+    const walletBalance = await this.paraConnector.getBalance(agentId);
     const balanceSnapshot =
       await this.portfolioManager.getLastSnapshot(agentId);
     return {
@@ -100,8 +100,8 @@ export class WalletService implements OnModuleInit {
         recordDepositDto.transactionHash,
       );
 
-      const walletAddress = await this.cdpConnector.getWalletAddress(agentId);
-      // const walletAddress = await this.paraConnector.getWalletAddress(agentId);
+      // const walletAddress = await this.cdpConnector.getWalletAddress(agentId);
+      const walletAddress = await this.paraConnector.getWalletAddress(agentId);
       if (history.toAddress.toLowerCase() !== walletAddress.toLowerCase()) {
         throw new BadRequestException(
           `Deposit destination address does not match agent wallet`,
@@ -167,7 +167,8 @@ export class WalletService implements OnModuleInit {
         agentId,
         withdrawTokenDto,
       );
-      const transactionHash = result.getTransactionHash();
+      const transactionHash = result;
+      // const transactionHash = result.getTransactionHash();
 
       const agent = await this.findAgentById(agentId);
       const balanceInfo = await this.getBalance(agentId);

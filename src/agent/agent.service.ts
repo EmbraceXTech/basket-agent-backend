@@ -55,8 +55,13 @@ export class AgentService implements OnModuleInit {
 
   async create(userId: string, createAgentDto: CreateAgentDto) {
     try {
-      const chainInfo =
-        COINBASE_NETWORK_ID_MAP[createAgentDto.chainId] || DEFAULT_CHAIN_ID;
+      // TODO: to sepolia
+      // const chainInfo =
+      //   COINBASE_NETWORK_ID_MAP[createAgentDto.chainId] || DEFAULT_CHAIN_ID;
+      const chainInfo = {
+        chainId: '11155111',
+        chainIdHex: '0x2a2a2a',
+      };
 
       const transaction = await this.db.transaction(async (tx) => {
         const agent = await tx
