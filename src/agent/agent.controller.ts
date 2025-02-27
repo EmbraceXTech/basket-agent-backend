@@ -7,6 +7,7 @@ import {
   Param,
   Body,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { AgentService } from './agent.service';
 import { CreateAgentDto } from './dto/create-agent.dto';
@@ -23,6 +24,7 @@ import { ValidateUser } from 'src/common/decorators/validate-user.decorator';
 import { WalletService } from './wallet/wallet.service';
 import { UpdateBulkDto } from './dto/update-bulk.dto';
 import { SimulateTradeDto } from './dto/simulate-trade.dto';
+import { GetLogsDto } from './dto/get-logs.dto';
 
 @Controller('agent')
 export class AgentController {
@@ -52,8 +54,15 @@ export class AgentController {
 
   @UseGuards(AgentGuard)
   @Get(':agentId/logs')
-  getLogs(@ValidateAgentOwner() agentId: string) {
-    return this.agentService.getLogs(agentId);
+  getLogs(
+    @ValidateAgentOwner() agentId: string,
+    @Query() getLogsDto: GetLogsDto,
+  ) {
+    return this.agentService.getLogs(
+      agentId,
+      getLogsDto.page,
+      getLogsDto.limit,
+    );
   }
 
   @UseGuards(AgentGuard)
@@ -169,7 +178,13 @@ export class AgentController {
 
   @UseGuards(AgentGuard)
   @Post(':agentId/simulate-trade')
-  simulateTrade(@ValidateAgentOwner() agentId: string, @Body() simulateTradeDto: SimulateTradeDto) {
-    return this.agentService.simulateTrade(agentId, simulateTradeDto.strategyDescription);
+  simulateTrade(
+    @ValidateAgentOwner() agentId: string,
+    @Body() simulateTradeDto: SimulateTradeDto,
+  ) {
+    return this.agentService.simulateTrade(
+      agentId,
+      simulateTradeDto.strategyDescription,
+    );
   }
 }

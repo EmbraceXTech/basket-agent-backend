@@ -15,7 +15,7 @@ import { AddKnowledgeDto } from './dto/add-knowledge.dto';
 import { DrizzleAsyncProvider } from 'src/db/drizzle.provider';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from 'src/db/schema';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import { WalletService } from './wallet/wallet.service';
 import {
   COINBASE_NETWORK_ID_MAP,
@@ -122,13 +122,37 @@ export class AgentService implements OnModuleInit {
     }
   }
 
-  async getLogs(id: string) {
+  async getLogs(id: string, page: number = 1, limit: number = 50) {
     try {
-      const logs = await this.db.query.logsTable.findMany({
-        where: eq(schema.logsTable.agentId, +id),
-        orderBy: desc(schema.logsTable.createdAt),
-      });
-      return logs;
+      const offset = (page - 1) * limit;
+
+      const [logs, totalCount] = await Promise.all([
+        this.db.query.logsTable.findMany({
+          limit: +limit,
+          offset: +offset,
+          where: eq(schema.logsTable.agentId, +id),
+          orderBy: desc(schema.logsTable.createdAt),
+        }),
+        this.db
+          .select({ count: sql<number>`count(*)` })
+          .from(schema.logsTable)
+          .where(eq(schema.logsTable.agentId, +id))
+          .then((result) => Number(result[0].count)),
+      ]);
+
+      console.log(logs.length);
+
+      const totalPages = Math.ceil(totalCount / limit);
+
+      return {
+        data: logs,
+        meta: {
+          currentPage: page,
+          itemsPerPage: limit,
+          totalItems: totalCount,
+          totalPages: totalPages,
+        },
+      };
     } catch (error) {
       throw new BadRequestException(
         `Failed to fetch agent logs: ${error.message}`,
