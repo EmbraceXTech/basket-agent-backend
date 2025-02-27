@@ -20,8 +20,4 @@ export class WithdrawTokenDto {
   @IsString()
   @IsNotEmpty()
   recipientAddress: string;
-
-  @IsString()
-  @IsNotEmpty()
-  destinationAddress: string;
 }
