@@ -23,6 +23,7 @@ import { TokenService } from 'src/token/token.service';
 import { BalanceSnapshotInput } from './interfaces/balance-snapshot.interface';
 import { ParaConnector } from './para-connector';
 import { AgentService } from '../agent.service';
+import ClaimPregensDto from './dto/claim.dto';
 
 @Injectable()
 export class WalletService implements OnModuleInit {
@@ -273,5 +274,9 @@ export class WalletService implements OnModuleInit {
   async faucet(agentId: string, token: string) {
     // return this.cdpConnector.faucet(agentId, token);
     return this.paraConnector.faucet(agentId, token);
+  }
+
+  async claimPregenWallet(agentId: string, claimPregensDto: ClaimPregensDto) {
+    await this.paraConnector.claimPregenWallet(agentId, claimPregensDto);
   }
 }

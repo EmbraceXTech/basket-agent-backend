@@ -14,6 +14,7 @@ import { BuyDto } from './dto/buy.dto';
 import { SellDto } from './dto/sell.dto';
 // import { FaucetDto } from './dto/faucet.dto';
 import { RecordDepositDto } from './dto/record-deposit.dto';
+import ClaimPregensDto from './dto/claim.dto';
 
 @Controller('agent/:agentId/wallet')
 export class WalletController {
@@ -65,6 +66,15 @@ export class WalletController {
   @Post('sell-asset')
   sellAsset(@ValidateAgentOwner() agentId: string, @Body() sellDto: SellDto) {
     return this.walletService.sellAsset(agentId, sellDto);
+  }
+
+  @UseGuards(AgentGuard)
+  @Post('claim-pregen-wallet')
+  claimPregens(
+    @ValidateAgentOwner() agentId: string,
+    @Body() claimPregensDto: ClaimPregensDto,
+  ) {
+    return this.walletService.claimPregenWallet(agentId, claimPregensDto);
   }
 
   // @UseGuards(AgentGuard)

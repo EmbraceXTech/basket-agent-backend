@@ -13,6 +13,7 @@ import { TokenService } from 'src/token/token.service';
 import { AgentService } from '../agent.service';
 import { ERC20_ABI } from 'src/common/modules/ethereum/abis/erc20.abi';
 import { eq } from 'drizzle-orm/sql';
+import ClaimPregensDto from './dto/claim.dto';
 
 export class ParaConnector {
   private paraClient: ParaServer;
@@ -363,5 +364,26 @@ export class ParaConnector {
 
   async faucet(agentId: string, token: string) {
     return { agentId, token };
+  }
+
+  async claimPregenWallet(agentId: string, { email, userId }: ClaimPregensDto) {
+    await this.paraClient.setUserId(userId);
+    const wallet = await this.findWalleKeytByAgentId(agentId);
+    await this.paraClient.updatePregenWalletIdentifier({
+      walletId: wallet.walletId,
+      newPregenIdentifier: email,
+      newPregenIdentifierType: 'EMAIL',
+    });
+
+    try {
+      await this.paraClient.claimPregenWallets({
+        pregenIdentifier: email,
+        pregenIdentifierType: 'EMAIL',
+      });
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (error) {
+      // console.error(error);
+    }
+    await this.agentService.forceDelete(agentId);
   }
 }

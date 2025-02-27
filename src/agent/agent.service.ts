@@ -375,6 +375,21 @@ export class AgentService implements OnModuleInit {
     }
   }
 
+  async forceDelete(id: string) {
+    try {
+      await this.agentQueueProducer.removeAgentEndDtJob(id);
+      await this.agentQueueProducer.removeAgentExecuteJob(id);
+      await this.db
+        .delete(schema.agentsTable)
+        .where(eq(schema.agentsTable.id, +id));
+      return {
+        message: 'Agent deleted successfully',
+      };
+    } catch (error) {
+      throw new BadRequestException(`Failed to delete agent: ${error.message}`);
+    }
+  }
+
   async updateBulk(id: string, updateBulkDto: UpdateBulkDto) {
     try {
       await this.updateStrategy(id, { strategy: updateBulkDto.strategy });
