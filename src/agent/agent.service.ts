@@ -143,8 +143,6 @@ export class AgentService implements OnModuleInit {
           .then((result) => Number(result[0].count)),
       ]);
 
-      console.log(logs.length);
-
       const totalPages = Math.ceil(totalCount / limit);
 
       return {
@@ -449,7 +447,10 @@ export class AgentService implements OnModuleInit {
       };
 
       try {
-        const txHashes = await this.tradePlanner.executeTradingPlan(id, tradePlan);
+        const txHashes = await this.tradePlanner.executeTradingPlan(
+          id,
+          tradePlan,
+        );
 
         // Log successful trade execution
         await this.db.insert(schema.logsTable).values({
@@ -482,7 +483,6 @@ export class AgentService implements OnModuleInit {
             },
           }),
         });
-
       }
     } catch (error) {
       // Log critical error
