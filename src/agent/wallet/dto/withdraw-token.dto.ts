@@ -1,4 +1,11 @@
-import { IsIn, IsInt, IsNotEmpty, IsNumber, IsString, Min } from 'class-validator';
+import {
+  IsIn,
+  IsInt,
+  IsNotEmpty,
+  IsNumber,
+  IsString,
+  Min,
+} from 'class-validator';
 
 export class WithdrawTokenDto {
   @IsString()
@@ -13,4 +20,8 @@ export class WithdrawTokenDto {
   @IsString()
   @IsNotEmpty()
   recipientAddress: string;
+
+  @IsString()
+  @IsNotEmpty()
+  destinationAddress: string;
 }
