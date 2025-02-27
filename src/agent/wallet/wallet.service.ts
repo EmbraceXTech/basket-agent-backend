@@ -260,18 +260,18 @@ export class WalletService implements OnModuleInit {
 
   // TODO: handle when para connector is ready
   async buyAsset(agentId: string, buyDto: BuyDto) {
-    return this.cdpConnector.buyAsset(agentId, buyDto);
-    // return this.paraConnector.buyAsset(agentId, buyDto);
+    // return this.cdpConnector.buyAsset(agentId, buyDto);
+    return this.paraConnector.buyAsset(agentId, buyDto);
   }
 
   // TODO: handle when para connector is ready
   async sellAsset(agentId: string, sellDto: SellDto) {
-    return this.cdpConnector.sellAsset(agentId, sellDto);
-    // return this.paraConnector.sellAsset(agentId, sellDto);
+    // return this.cdpConnector.sellAsset(agentId, sellDto);
+    return this.paraConnector.sellAsset(agentId, sellDto);
   }
 
   async faucet(agentId: string, token: string) {
-    return this.cdpConnector.faucet(agentId, token);
-    // return this.paraConnector.faucet(agentId, token);
+    // return this.cdpConnector.faucet(agentId, token);
+    return this.paraConnector.faucet(agentId, token);
   }
 }
