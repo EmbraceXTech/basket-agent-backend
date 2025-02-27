@@ -19,10 +19,14 @@ import { config } from 'src/config';
 import { LlmModule } from 'src/llm/llm.module';
 import { BullBoardModule } from '@bull-board/nestjs';
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
+import { ChainModule } from 'src/chain/chain.module';
+import { TokenModule } from 'src/token/token.module';
 
 @Module({
   imports: [
     PriceModule,
+    ChainModule,
+    TokenModule,
     forwardRef(() => LlmModule),
     forwardRef(() => WalletModule),
     BullModule.registerQueue({

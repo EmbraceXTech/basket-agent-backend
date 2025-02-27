@@ -1,5 +1,9 @@
-import ParaServer, { Environment, WalletType } from '@getpara/server-sdk';
-import { ethers } from 'ethers';
+import ParaServer, {
+  Environment,
+  OAuthMethod,
+  WalletType,
+} from '@getpara/server-sdk';
+import { ethers, parseUnits } from 'ethers';
 import { ParaEthersSigner } from '@getpara/ethers-v6-integration';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
@@ -13,6 +17,10 @@ import { TokenService } from 'src/token/token.service';
 import { AgentService } from '../agent.service';
 import { ERC20_ABI } from 'src/common/modules/ethereum/abis/erc20.abi';
 import { eq } from 'drizzle-orm/sql';
+import ClaimPregensDto from './dto/claim.dto';
+import { ChainService } from 'src/chain/chain.service';
+import { EthConnector } from './eth-connector';
+import { MOCK_AMM_ABI } from 'src/common/modules/ethereum/abis/mock-amm.abi';
 
 export class ParaConnector {
   private paraClient: ParaServer;
@@ -23,12 +31,14 @@ export class ParaConnector {
     private priceService: PriceService,
     private tokenService: TokenService,
     private agentService: AgentService,
+    private chainService: ChainService,
+    private ethConnector: EthConnector,
   ) {
     this.paraClient = new ParaServer(Environment.BETA, config.paraApiKey);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async createAgentWallet(chainIdHex?: string) {
+  async createAgentWallet(chainId?: string) {
     return this._createParaWallet();
   }
 
@@ -81,20 +91,25 @@ export class ParaConnector {
 
   // set user share
   private async _fetchUserShare(agentId?: string) {
-    if (!this.paraClient.getUserShare()) {
-      const walletKey = await this.findWalleKeytByAgentId(agentId);
-      const userShare = walletKey.userShare;
-      this.paraClient.setUserShare(userShare);
-    }
+    const walletKey = await this.findWalleKeytByAgentId(agentId);
+    const userShare = walletKey.userShare;
+    this.paraClient.setUserShare(userShare);
   }
 
-  private async _getSigner(agentId?: string, chainId?: string) {
+  private async _getSigner(agentId?: string) {
     await this._fetchUserShare(agentId);
-    const rpcUrl = config.baseRpcUrl;
-    const provider = new ethers.JsonRpcProvider(
-      rpcUrl ?? 'https://ethereum-sepolia-rpc.publicnode.com',
+    const agent = await this.agentService.findOne(agentId);
+    const chainInfo = await this.chainService.getChainInfo(
+      Number(agent.chainId),
     );
-    const ethersSigner = new ParaEthersSigner(this.paraClient as any, provider);
+    const [rpcUrl] = chainInfo.rpc;
+    const provider = new ethers.JsonRpcProvider(rpcUrl);
+    const walletId = (await this.findWalleKeytByAgentId(agentId)).walletId;
+    const ethersSigner = new ParaEthersSigner(
+      this.paraClient as any,
+      provider,
+      walletId,
+    );
     return ethersSigner;
   }
 
@@ -165,7 +180,7 @@ export class ParaConnector {
     if (!agent || !agent.selectedTokens || agent.selectedTokens.length === 0) {
       return { nativeToken: null, erc20Tokens: [] };
     }
-
+    const usdcInfo = await this.tokenService.getBasedToken(agent.chainId);
     const selectedTokens = agent.selectedTokens.map((token) =>
       JSON.parse(token),
     ) as Array<{
@@ -181,7 +196,13 @@ export class ParaConnector {
         token.tokenAddress === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
     );
 
-    const erc20Tokens = selectedTokens.filter(
+    const erc20Tokens = [
+      ...selectedTokens,
+      {
+        tokenSymbol: usdcInfo.symbol,
+        tokenAddress: usdcInfo.address as `0x${string}`,
+      },
+    ].filter(
       (token) =>
         token.tokenSymbol.toUpperCase() !== this.nativeTokenSymbol &&
         token.tokenAddress !== '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
@@ -209,19 +230,20 @@ export class ParaConnector {
 
   private async _transferToken({
     signer,
-    tokenAddress,
+    tokenSymbol,
     to,
     amount,
     chainId,
   }: {
     signer: ethers.Signer;
-    tokenAddress: string;
+    tokenSymbol: string;
     to: string;
     amount: number;
     chainId?: string;
   }) {
     const tokenAvaiable = await this.tokenService.getAvailableTokenMap(chainId);
-    const decimals = tokenAvaiable[tokenAddress].decimals;
+    const decimals = tokenAvaiable[tokenSymbol].decimals;
+    const tokenAddress = tokenAvaiable[tokenSymbol].address;
     const contract = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
     const tx = await contract.transfer(
       to,
@@ -293,51 +315,103 @@ export class ParaConnector {
     const { assetId, amount, recipientAddress } = withdrawTokenDto;
     const signer = await this._getSigner(agentId);
     if (assetId === 'eth') {
-      return this._transferEther({ signer, amount, to: recipientAddress });
+      const receipt = await this._transferEther({
+        signer,
+        amount,
+        to: recipientAddress,
+      });
+      return receipt.hash;
     } else if (assetId === 'usdc') {
       const agent = await this.agentService.findOne(agentId);
-      return this._transferToken({
+      const receipt = await this._transferToken({
         signer,
-        tokenAddress: assetId,
+        tokenSymbol: assetId,
         to: recipientAddress,
         amount,
         chainId: agent.chainId,
       });
+      return receipt.hash;
     }
   }
 
-  // TODO: implement
   async buyAsset(agentId: string, buyDto: BuyDto) {
-    // const { tokenAddress, usdAmount } = buyDto;
+    const signer = await this._getSigner(agentId);
     const agent = await this.agentService.findOne(agentId);
     const tokenMap = await this.tokenService.getAvailableTokenMap(
       agent.chainId,
     );
-    // swap usdc to token
-    return;
-    // return this.trade(
-    //   agentId,
-    //   tokenMap['usdc'].address,
-    //   buyDto.tokenAddress,
-    //   buyDto.usdAmount,
-    // );
+    const ammAddress = await this.chainService.getAmmAddress(Number(agent.chainId));
+
+    const usdcTokenInfo = tokenMap['usdc'];
+    const outputTokenInfo = tokenMap[buyDto.tokenAddress.toLowerCase()];
+
+    const [outputTokenPriceRes] = await this.priceService.getPrices([
+      outputTokenInfo.symbol.toUpperCase(),
+    ]);
+    const outputTokenPrice = outputTokenPriceRes.price;
+    const inputAmount = buyDto.usdAmount;
+    const outputAmount = inputAmount * outputTokenPrice;
+
+    const parsedInputAmount = parseUnits(inputAmount.toFixed(usdcTokenInfo.decimals), usdcTokenInfo.decimals);
+    const parsedOutputAmount = parseUnits(outputAmount.toFixed(outputTokenInfo.decimals), outputTokenInfo.decimals);
+
+    const usdcContract = new ethers.Contract(usdcTokenInfo.address, ERC20_ABI, signer);
+    const allowance = await usdcContract.allowance(agent.walletKey.address, ammAddress);
+
+    if (allowance < parsedInputAmount) {
+      const tx = await usdcContract.approve(ammAddress, ethers.MaxUint256);
+      await tx.wait();
+    }
+
+    const contract = new ethers.Contract(ammAddress, MOCK_AMM_ABI, signer);
+    const tx = await contract.swap(
+      usdcTokenInfo.address,
+      outputTokenInfo.address,
+      parsedInputAmount,
+      parsedOutputAmount,
+    );
+    const receipt = await tx.wait();
+    return receipt.hash as string;
   }
 
-  // TODO: implement
   async sellAsset(agentId: string, sellDto: SellDto) {
-    const { tokenAddress, tokenAmount } = sellDto;
+    const signer = await this._getSigner(agentId);
     const agent = await this.agentService.findOne(agentId);
     const tokenMap = await this.tokenService.getAvailableTokenMap(
       agent.chainId,
     );
-    // swap token to usdc
-    return;
-    // return this.trade(
-    //   agentId,
-    //   sellDto.tokenAddress,
-    //   tokenMap['usdc'].address,
-    //   sellDto.tokenAmount,
-    // );
+    const ammAddress = await this.chainService.getAmmAddress(Number(agent.chainId));
+
+    const inputTokenInfo = tokenMap[sellDto.tokenAddress.toLowerCase()];
+    const usdcTokenInfo = tokenMap['usdc'];
+
+    const [inputTokenPriceRes] = await this.priceService.getPrices([
+      inputTokenInfo.symbol.toUpperCase(),
+    ]);
+    const inputTokenPrice = inputTokenPriceRes.price;
+    const inputAmount = sellDto.tokenAmount;
+    const outputAmount = inputAmount / inputTokenPrice;
+
+    const parsedInputAmount = parseUnits(inputAmount.toFixed(inputTokenInfo.decimals), inputTokenInfo.decimals);
+    const parsedOutputAmount = parseUnits(outputAmount.toFixed(usdcTokenInfo.decimals), usdcTokenInfo.decimals);
+
+    const inputTokenContract = new ethers.Contract(inputTokenInfo.address, ERC20_ABI, signer);
+    const allowance = await inputTokenContract.allowance(agent.walletKey.address, ammAddress);
+
+    if (allowance < parsedInputAmount) {
+      const tx = await inputTokenContract.approve(ammAddress, ethers.MaxUint256);
+      await tx.wait();
+    }
+
+    const contract = new ethers.Contract(ammAddress, MOCK_AMM_ABI, signer);
+    const tx = await contract.swap(
+      inputTokenInfo.address,
+      usdcTokenInfo.address,
+      parsedInputAmount,
+      parsedOutputAmount,
+    );
+    const receipt = await tx.wait();
+    return receipt.hash as string;
   }
 
   async getWalletAddress(agentId: string) {
@@ -347,5 +421,41 @@ export class ParaConnector {
 
   async faucet(agentId: string, token: string) {
     return { agentId, token };
+  }
+
+  async claimPregenWallet(
+    agentId: string,
+    { identifier, identifierType, userId }: ClaimPregensDto,
+  ) {
+    await this.paraClient.setUserId(userId);
+    const wallet = await this.findWalleKeytByAgentId(agentId);
+    await this.paraClient.updatePregenWalletIdentifier({
+      walletId: wallet.walletId,
+      newPregenIdentifier: identifier,
+      newPregenIdentifierType: identifierType as
+        | 'EMAIL'
+        | 'PHONE'
+        | 'CUSTOM_ID'
+        | OAuthMethod.TWITTER
+        | OAuthMethod.DISCORD
+        | OAuthMethod.TELEGRAM,
+    });
+
+    try {
+      await this.paraClient.claimPregenWallets({
+        pregenIdentifier: identifier,
+        pregenIdentifierType: identifierType as
+          | 'EMAIL'
+          | 'PHONE'
+          | 'CUSTOM_ID'
+          | OAuthMethod.TWITTER
+          | OAuthMethod.DISCORD
+          | OAuthMethod.TELEGRAM,
+      });
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (error) {
+      // console.error(error);
+    }
+    await this.agentService.delete(agentId, false);
   }
 }

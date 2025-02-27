@@ -14,8 +14,9 @@ export class PriceService {
   async getPrices(tokens: string[], chainId = config.defaultChainId) {
     const upperCaseTokens = tokens.map((token) => token.toUpperCase());
 
+    const tokenList = await this.tokenService.getAvailableTokens(chainId);
     const foundUnavailableTokens = upperCaseTokens.filter(
-      (token) => !config.availableTokens.includes(token),
+      (token) => !tokenList.some((t) => t.symbol === token),
     );
     if (foundUnavailableTokens.length > 0) {
       throw new Error(

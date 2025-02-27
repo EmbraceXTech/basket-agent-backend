@@ -13,20 +13,19 @@ import { eq } from 'drizzle-orm';
 import { SellDto } from './dto/sell.dto';
 import { BuyDto } from './dto/buy.dto';
 import { PriceService } from 'src/price/price.service';
-import { CdpConnector } from './cdp-connector';
 import { PortfolioManager } from './portfolio-manager';
 import { RecordDepositDto } from './dto/record-deposit.dto';
 import { EthConnector } from './eth-connector';
-import { config } from 'src/config';
 import { NATIVE_TOKEN_ADDRESS } from 'src/constant/eth.constant';
 import { TokenService } from 'src/token/token.service';
 import { BalanceSnapshotInput } from './interfaces/balance-snapshot.interface';
 import { ParaConnector } from './para-connector';
 import { AgentService } from '../agent.service';
+import ClaimPregensDto from './dto/claim.dto';
+import { ChainService } from 'src/chain/chain.service';
 
 @Injectable()
 export class WalletService implements OnModuleInit {
-  private cdpConnector: CdpConnector;
   private paraConnector: ParaConnector;
   private portfolioManager: PortfolioManager;
   private ethConnector: EthConnector;
@@ -34,36 +33,34 @@ export class WalletService implements OnModuleInit {
   constructor(
     @Inject(DrizzleAsyncProvider)
     private readonly db: NodePgDatabase<typeof schema>,
-    private priceService: PriceService,
-    private tokenService: TokenService,
+    private readonly priceService: PriceService,
+    private readonly tokenService: TokenService,
     @Inject(forwardRef(() => AgentService))
-    private agentService: AgentService,
+    private readonly agentService: AgentService,
+    private readonly chainService: ChainService,
   ) {}
 
   onModuleInit() {
-    this.cdpConnector = new CdpConnector(
-      this.db,
-      this.priceService,
-      this.tokenService,
-    );
+    this.ethConnector = new EthConnector(this.tokenService, this.chainService);
     this.paraConnector = new ParaConnector(
       this.db,
       this.priceService,
       this.tokenService,
       this.agentService,
+      this.chainService,
+      this.ethConnector
     );
     this.portfolioManager = new PortfolioManager(this.db);
-    this.ethConnector = new EthConnector();
   }
 
-  async createAgentWallet(chainIdHex: string) {
-    return this.cdpConnector.createAgentWallet(chainIdHex);
-    // return this.paraConnector.createAgentWallet(chainIdHex);
+  async createAgentWallet(chainId: string) {
+    // return this.cdpConnector.createAgentWallet(chainIdHex);
+    return this.paraConnector.createAgentWallet(chainId);
   }
 
   async getBalance(agentId: string) {
-    const walletBalance = await this.cdpConnector.getBalance(agentId);
-    // const walletBalance = await this.paraConnector.getBalance(agentId);
+    // const walletBalance = await this.cdpConnector.getBalance(agentId);
+    const walletBalance = await this.paraConnector.getBalance(agentId);
     const balanceSnapshot =
       await this.portfolioManager.getLastSnapshot(agentId);
     return {
@@ -95,13 +92,16 @@ export class WalletService implements OnModuleInit {
     try {
       const agent = await this.findAgentById(agentId);
       const balanceInfo = await this.getBalance(agentId);
+      const chainInfo = await this.chainService.getChainInfo(
+        Number(agent.chainId),
+      );
+      const [rpcUrl] = chainInfo.rpc;
       const history = await this.ethConnector.getTransferHistory(
-        config.baseRpcUrl,
+        rpcUrl,
         recordDepositDto.transactionHash,
       );
 
-      const walletAddress = await this.cdpConnector.getWalletAddress(agentId);
-      // const walletAddress = await this.paraConnector.getWalletAddress(agentId);
+      const walletAddress = await this.paraConnector.getWalletAddress(agentId);
       if (history.toAddress.toLowerCase() !== walletAddress.toLowerCase()) {
         throw new BadRequestException(
           `Deposit destination address does not match agent wallet`,
@@ -178,15 +178,11 @@ export class WalletService implements OnModuleInit {
 
   async withdraw(agentId: string, withdrawTokenDto: WithdrawTokenDto) {
     try {
-      const result = await this.cdpConnector.withdraw(
+      const result = await this.paraConnector.withdraw(
         agentId,
         withdrawTokenDto,
       );
-      // const result = await this.paraConnector.withdraw(
-      //   agentId,
-      //   withdrawTokenDto,
-      // );
-      const transactionHash = result.getTransactionHash();
+      const transactionHash = result;
 
       const agent = await this.findAgentById(agentId);
       const balanceInfo = await this.getBalance(agentId);
@@ -259,18 +255,22 @@ export class WalletService implements OnModuleInit {
 
   // TODO: handle when para connector is ready
   async buyAsset(agentId: string, buyDto: BuyDto) {
-    return this.cdpConnector.buyAsset(agentId, buyDto);
-    // return this.paraConnector.buyAsset(agentId, buyDto);
+    // return this.cdpConnector.buyAsset(agentId, buyDto);
+    return this.paraConnector.buyAsset(agentId, buyDto);
   }
 
   // TODO: handle when para connector is ready
   async sellAsset(agentId: string, sellDto: SellDto) {
-    return this.cdpConnector.sellAsset(agentId, sellDto);
-    // return this.paraConnector.sellAsset(agentId, sellDto);
+    // return this.cdpConnector.sellAsset(agentId, sellDto);
+    return this.paraConnector.sellAsset(agentId, sellDto);
   }
 
   async faucet(agentId: string, token: string) {
-    return this.cdpConnector.faucet(agentId, token);
-    // return this.paraConnector.faucet(agentId, token);
+    // return this.cdpConnector.faucet(agentId, token);
+    return this.paraConnector.faucet(agentId, token);
+  }
+
+  async claimPregenWallet(agentId: string, claimPregensDto: ClaimPregensDto) {
+    await this.paraConnector.claimPregenWallet(agentId, claimPregensDto);
   }
 }

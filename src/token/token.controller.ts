@@ -14,15 +14,9 @@ export class TokenController {
   @Get('available-tokens')
   async getAvailableTokens(
     @Query('chainId') chainId: number,
-    @Query('includeTokenBase') includeTokenBase?: string,
   ) {
     try {
-      const _includeTokenBase = includeTokenBase === 'true';
-
-      return await this.tokenService.getAvailableTokens(
-        chainId,
-        _includeTokenBase,
-      );
+      return await this.tokenService.getAvailableTokens(chainId);
     } catch (e) {
       console.log(e);
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);

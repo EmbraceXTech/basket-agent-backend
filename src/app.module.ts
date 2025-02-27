@@ -33,7 +33,7 @@ import { BullBoardModule } from '@bull-board/nestjs';
     }),
     BullBoardModule.forRoot({
       route: '/queues',
-      adapter: ExpressAdapter,
+      adapter: ExpressAdapter as any,
     }),
   ],
   providers: [
