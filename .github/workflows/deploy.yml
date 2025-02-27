@@ -27,7 +27,7 @@ jobs:
           REDIS_HOST=${{secrets.REDIS_HOST}}
           REDIS_PORT=${{secrets.REDIS_PORT}}
           REDIS_PASSWORD=${{secrets.REDIS_PASSWORD}}
-          PARSER_API_KEY=${{secrets.PARSER_API_KEY}}
+          PARA_API_KEY=${{secrets.PARA_API_KEY}}
           EOF
 
       - name: Run Docker Compose

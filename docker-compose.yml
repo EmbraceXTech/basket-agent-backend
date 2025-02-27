@@ -22,6 +22,6 @@ services:
       - REDIS_HOST=${REDIS_HOST}
       - REDIS_PORT=${REDIS_PORT}
       - REDIS_PASSWORD=${REDIS_PASSWORD}
-      - PARSER_API_KEY=${PARSER_API_KEY}
+      - PARA_API_KEY=${PARA_API_KEY}
 
     network_mode: host
