@@ -1,4 +1,4 @@
-const MINTABLE_ERC20_ABI = [
+export const MINTABLE_ERC20_ABI = [
   {
     inputs: [
       {
