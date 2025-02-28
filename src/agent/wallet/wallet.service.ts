@@ -231,8 +231,9 @@ export class WalletService implements OnModuleInit {
         }),
       });
 
-      return result;
+      return { transactionHash };
     } catch (e) {
+      console.error(e);
       throw new BadRequestException(`Failed to withdraw: ${e.message}`);
     }
   }
