@@ -21,6 +21,7 @@ import ClaimPregensDto from './dto/claim.dto';
 import { ChainService } from 'src/chain/chain.service';
 import { EthConnector } from './eth-connector';
 import { MOCK_AMM_ABI } from 'src/common/modules/ethereum/abis/mock-amm.abi';
+import { MINTABLE_ERC20_ABI } from 'src/common/modules/ethereum/abis/mintable-erc20.abi';
 
 export class ParaConnector {
   private paraClient: ParaServer;
@@ -340,7 +341,9 @@ export class ParaConnector {
     const tokenMap = await this.tokenService.getAvailableTokenMap(
       agent.chainId,
     );
-    const ammAddress = await this.chainService.getAmmAddress(Number(agent.chainId));
+    const ammAddress = await this.chainService.getAmmAddress(
+      Number(agent.chainId),
+    );
 
     const usdcTokenInfo = tokenMap['usdc'];
     const outputTokenInfo = tokenMap[buyDto.tokenAddress.toLowerCase()];
@@ -352,11 +355,24 @@ export class ParaConnector {
     const inputAmount = buyDto.usdAmount;
     const outputAmount = inputAmount / outputTokenPrice;
 
-    const parsedInputAmount = parseUnits(inputAmount.toFixed(usdcTokenInfo.decimals), usdcTokenInfo.decimals);
-    const parsedOutputAmount = parseUnits(outputAmount.toFixed(outputTokenInfo.decimals), outputTokenInfo.decimals);
+    const parsedInputAmount = parseUnits(
+      inputAmount.toFixed(usdcTokenInfo.decimals),
+      usdcTokenInfo.decimals,
+    );
+    const parsedOutputAmount = parseUnits(
+      outputAmount.toFixed(outputTokenInfo.decimals),
+      outputTokenInfo.decimals,
+    );
 
-    const usdcContract = new ethers.Contract(usdcTokenInfo.address, ERC20_ABI, signer);
-    const allowance = await usdcContract.allowance(agent.walletKey.address, ammAddress);
+    const usdcContract = new ethers.Contract(
+      usdcTokenInfo.address,
+      ERC20_ABI,
+      signer,
+    );
+    const allowance = await usdcContract.allowance(
+      agent.walletKey.address,
+      ammAddress,
+    );
 
     if (allowance < parsedInputAmount) {
       const tx = await usdcContract.approve(ammAddress, ethers.MaxUint256);
@@ -380,7 +396,9 @@ export class ParaConnector {
     const tokenMap = await this.tokenService.getAvailableTokenMap(
       agent.chainId,
     );
-    const ammAddress = await this.chainService.getAmmAddress(Number(agent.chainId));
+    const ammAddress = await this.chainService.getAmmAddress(
+      Number(agent.chainId),
+    );
 
     const inputTokenInfo = tokenMap[sellDto.tokenAddress.toLowerCase()];
     const usdcTokenInfo = tokenMap['usdc'];
@@ -392,14 +410,30 @@ export class ParaConnector {
     const inputAmount = sellDto.tokenAmount;
     const outputAmount = inputAmount / inputTokenPrice;
 
-    const parsedInputAmount = parseUnits(inputAmount.toFixed(inputTokenInfo.decimals), inputTokenInfo.decimals);
-    const parsedOutputAmount = parseUnits(outputAmount.toFixed(usdcTokenInfo.decimals), usdcTokenInfo.decimals);
+    const parsedInputAmount = parseUnits(
+      inputAmount.toFixed(inputTokenInfo.decimals),
+      inputTokenInfo.decimals,
+    );
+    const parsedOutputAmount = parseUnits(
+      outputAmount.toFixed(usdcTokenInfo.decimals),
+      usdcTokenInfo.decimals,
+    );
 
-    const inputTokenContract = new ethers.Contract(inputTokenInfo.address, ERC20_ABI, signer);
-    const allowance = await inputTokenContract.allowance(agent.walletKey.address, ammAddress);
+    const inputTokenContract = new ethers.Contract(
+      inputTokenInfo.address,
+      ERC20_ABI,
+      signer,
+    );
+    const allowance = await inputTokenContract.allowance(
+      agent.walletKey.address,
+      ammAddress,
+    );
 
     if (allowance < parsedInputAmount) {
-      const tx = await inputTokenContract.approve(ammAddress, ethers.MaxUint256);
+      const tx = await inputTokenContract.approve(
+        ammAddress,
+        ethers.MaxUint256,
+      );
       await tx.wait();
     }
 
@@ -420,7 +454,24 @@ export class ParaConnector {
   }
 
   async faucet(agentId: string, token: string) {
-    return { agentId, token };
+    const agent = await this.agentService.findOne(agentId);
+    const tokenInfos = await this.tokenService.getAvailableTokenMap(
+      agent.chainId,
+    );
+
+    const tokenInfo = tokenInfos[token.toLowerCase()];
+    const signer = await this._getSigner(agentId);
+    const contract = new ethers.Contract(
+      tokenInfo.address,
+      MINTABLE_ERC20_ABI,
+      signer,
+    );
+    const tx = await contract.mint(
+      agent.walletKey.address,
+      ethers.parseUnits('10', tokenInfo.decimals),
+    );
+    const receipt = await tx.wait();
+    return receipt.hash;
   }
 
   async claimPregenWallet(
