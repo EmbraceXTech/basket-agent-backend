@@ -225,8 +225,7 @@ export class ParaConnector {
       to,
       value: ethers.parseEther(amount.toString()),
     });
-    const receipt = await tx.wait();
-    return receipt;
+    return tx;
   }
 
   private async _transferToken({
@@ -250,8 +249,7 @@ export class ParaConnector {
       to,
       ethers.parseUnits(amount.toString(), decimals),
     );
-    const receipt = await tx.wait();
-    return receipt;
+    return tx;
   }
 
   async getBalance(agentId: string): Promise<{
@@ -316,22 +314,22 @@ export class ParaConnector {
     const { assetId, amount, recipientAddress } = withdrawTokenDto;
     const signer = await this._getSigner(agentId);
     if (assetId === 'eth') {
-      const receipt = await this._transferEther({
+      const tx = await this._transferEther({
         signer,
         amount,
         to: recipientAddress,
       });
-      return receipt.hash;
+      return tx.hash;
     } else if (assetId === 'usdc') {
       const agent = await this.agentService.findOne(agentId);
-      const receipt = await this._transferToken({
+      const tx = await this._transferToken({
         signer,
         tokenSymbol: assetId,
         to: recipientAddress,
         amount,
         chainId: agent.chainId,
       });
-      return receipt.hash;
+      return tx.hash;
     }
   }
 
@@ -386,8 +384,7 @@ export class ParaConnector {
       parsedInputAmount,
       parsedOutputAmount,
     );
-    const receipt = await tx.wait();
-    return receipt.hash as string;
+    return tx.hash as string;
   }
 
   async sellAsset(agentId: string, sellDto: SellDto) {
@@ -444,8 +441,7 @@ export class ParaConnector {
       parsedInputAmount,
       parsedOutputAmount,
     );
-    const receipt = await tx.wait();
-    return receipt.hash as string;
+    return tx.hash as string;
   }
 
   async getWalletAddress(agentId: string) {
@@ -470,8 +466,7 @@ export class ParaConnector {
       agent.walletKey.address,
       ethers.parseUnits('10', tokenInfo.decimals),
     );
-    const receipt = await tx.wait();
-    return receipt.hash;
+    return tx.hash;
   }
 
   async claimPregenWallet(
